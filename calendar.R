@@ -70,22 +70,45 @@ data <- data.frame(
 # data <- cal_demo_data()[1, ]
 data <- block_template_vo2_1
 
-#.find('.tui-full-calendar-month-week-item').index()
-# alert(e.closest('div').find('.tui-full-calendar-month-week-item'));
+js_current_date <- "
+var elements = document.getElementsByClassName('tui-full-calendar-month-week-item');
+for (var i = 0; i < elements.length; i++) {
+  elements[i].addEventListener('click', function(el) {
+    var target = el.target;
+    Shiny.onInputChange('val', target.textContent)
+    while (target.className != 'tui-full-calendar-month-week-item') {
+      target = target.parentElement
+    }
+    Shiny.onInputChange('row_idx', [...target.parentElement.children].indexOf(target))
+  });
+    }
+"
+
+
 server <- function(input, output, session) {
   
   global <- reactiveValues(data = data)
   #//var rows = document.getElementById('my_calendar').getElementsByClassName('tui-full-calendar-month-week-item');
-  session$onFlushed(function() shinyjs::runjs("
-  var elements = document.getElementById('my_calendar').getElementsByTagName('*');
-  for(var nr = 0, len = elements.length; nr < len; nr++) {
-    if(elements[nr].classList.contains('tui-full-calendar-weekday-grid-line')){
-      elements[nr].onclick = function (e) {
-        Shiny.onInputChange('clicked_data', {val: e.target.textContent, rand: Math.random()});
-      }
-    }
-  }
-  "), once = FALSE)
+  
+  session$onSessionEnded(function() {
+    stopApp()
+  })
+  
+  session$onFlushed( function(){
+    shinyjs::runjs(js_current_date)
+  }, once = FALSE )
+  
+  
+  # session$onFlushed(function() shinyjs::runjs("
+  # var elements = document.getElementById('my_calendar').getElementsByTagName('*');
+  # for(var nr = 0, len = elements.length; nr < len; nr++) {
+  #   if(elements[nr].classList.contains('tui-full-calendar-weekday-grid-line')){
+  #     elements[nr].onclick = function (e) {
+  #       Shiny.onInputChange('clicked_data', {val: e.target.textContent, rand: Math.random()});
+  #     }
+  #   }
+  # }
+  # "), once = FALSE)
   
   observe({
     
@@ -165,8 +188,24 @@ server <- function(input, output, session) {
     calendar(global$data, navigation = TRUE)
   })
   
-  output$dates <- renderPrint({
-    input$my_calendar_dates
+  observe({
+    req(!is.na(input$row_idx))
+    req(input$row_idx)
+    start_month <- format(as.Date(input$my_calendar_dates$start),"%m")
+    current_month <- format(as.Date(input$my_calendar_dates$current),"%m")
+    end_month <- format(as.Date(input$my_calendar_dates$end),"%m")
+    row_nr = input$row_idx
+    val = gsub(input$val, pattern = "\n| ", replacement = "") %>% as.numeric
+    req(!is.na(val))
+    if(row_nr %in% c(0, 1) & val > 16){
+      month = start_month
+    }else if(row_nr %in% c(4, 5) & val < 16){
+      month = end_month
+    }else{
+      month = current_month
+    }
+    print(month)
+    print(val)
   })
   
   output$click <- renderPrint({
