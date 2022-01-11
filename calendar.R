@@ -69,9 +69,9 @@ data <- data.frame(
 
 # data <- cal_demo_data()[1, ]
 data <- block_template_vo2_1
+data$id <- seq_len(nrow(data))
 
 js_current_date <- "
-
 var elements = document.getElementsByClassName('tui-full-calendar-weekday-grid-line  tui-full-calendar-near-month-day');
 for (var i = 0; i < elements.length; i++) {
   elements[i].addEventListener('click', function(el) {
@@ -172,9 +172,9 @@ server <- function(input, output, session) {
       bgColor = NA,
       color = NA,
       borderColor = NA,
-      date_diff = NA
+      date_diff = NA,
+      id = nrow(global$data) + 1
     )
-    
     
     add$title <- input$title #paste(input$sport_type, input$duration, "min")
     add$start <- paste0("2022-01-", rep(0, 2 - nchar(global$click_date)), global$click_date) %>% as.Date
@@ -184,7 +184,57 @@ server <- function(input, output, session) {
   })
   
   output$my_calendar <- renderCalendar({
-    calendar(global$data, navigation = TRUE)
+    calendar(global$data, navigation = TRUE, useDetailPopup = FALSE) %>% 
+      cal_events(
+        clickSchedule = JS(
+          "function(event) {", 
+          "Shiny.setInputValue('calendar_id_click', {id: event.schedule.id, x: event.event.clientX, y: event.event.clientY});", 
+          "}"
+        )
+      )
+  })
+  
+  observeEvent(input$calendar_id_click, {
+    removeUI(selector = "#custom_popup")
+    id <- as.numeric(input$calendar_id_click$id)
+    # Get the appropriate line clicked
+    sched <- global$data[global$data$id == id, ]
+    
+    insertUI(
+      selector = "body",
+      ui = absolutePanel(
+        id = "custom_popup",
+        top = input$calendar_id_click$y,
+        left = input$calendar_id_click$x, 
+        draggable = FALSE,
+        width = "300px",
+        tags$div(
+          style = "width: 250px; position: relative; background: #FFF; padding: 10px; box-shadow: 0px 0.2em 0.4em rgb(0, 0, 0, 0.8); border-radius: 5px;",
+          actionLink(
+            inputId = "close_calendar_panel", 
+            label = NULL, icon = icon("close"), 
+            style = "position: absolute; top: 5px; right: 5px;"
+          ),
+          tags$br(),
+          tags$div(
+            style = "text-align: center;",
+            tags$p(
+              "Here you can put custom", tags$b("HTML"), "elements."
+            )
+          )
+        )
+      )
+    )
+  })
+  
+  observeEvent(input$close_calendar_panel, {
+    removeUI(selector = "#custom_popup")
+  })
+  
+  rv <- reactiveValues(id = NULL, status = NULL)
+  observeEvent(input$status, {
+    rv$id <- input$calendar_id_click$id
+    rv$status <- input$status
   })
   
   observe({
