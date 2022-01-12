@@ -71,6 +71,7 @@ data <- data.frame(
 data <- block_template_vo2_1
 data$id <- seq_len(nrow(data))
 
+
 js_current_date <- "
 var elements = document.getElementsByClassName('tui-full-calendar-weekday-grid-line  tui-full-calendar-near-month-day');
 for (var i = 0; i < elements.length; i++) {
@@ -130,7 +131,8 @@ server <- function(input, output, session) {
                      ),
                      choiceValues = list(
                        "bike", "run", "ski", "swim", "dumbbell"
-                     )),
+                     )
+        ),
         selectInput("template", "Choose from template:",
                     c("4_4min_HIT", "3_13_30_15_HIT", "2h_LIT")),
         
@@ -219,7 +221,7 @@ server <- function(input, output, session) {
           tags$div(
             style = "text-align: center;",
             tags$p(
-              "Here you can put custom", tags$b("HTML"), "elements."
+              global$data$title[id]
             )
           )
         )
