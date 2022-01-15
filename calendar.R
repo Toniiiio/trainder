@@ -70,9 +70,15 @@ data <- data.frame(
 # data <- cal_demo_data()[1, ]
 data <- block_template_vo2_1
 data$id <- seq_len(nrow(data))
-
+data$type <- ifelse(grepl(pattern = "HIT", data$title), "HIT", "LIT")
 
 js_current_date <- "
+var elements = document.getElementsByTagName('body');
+elements.addEventListener('click', function(el) {
+  Shiny.onInputChange('body_clicked', Math.random());
+});
+
+// get date
 var elements = document.getElementsByClassName('tui-full-calendar-weekday-grid-line  tui-full-calendar-near-month-day');
 for (var i = 0; i < elements.length; i++) {
   elements[i].addEventListener('click', function(el) {
@@ -81,7 +87,7 @@ for (var i = 0; i < elements.length; i++) {
   });
 }
 
-
+// get month
 var elements = document.getElementsByClassName('tui-full-calendar-month-week-item');
 for (var i = 0; i < elements.length; i++) {
   elements[i].addEventListener('click', function(el) {
@@ -108,6 +114,9 @@ server <- function(input, output, session) {
     shinyjs::runjs(js_current_date)
   }, once = FALSE )
   
+  observe({
+    print(input$body_cliked)
+  })
   
   observe({
     
@@ -199,8 +208,84 @@ server <- function(input, output, session) {
   observeEvent(input$calendar_id_click, {
     removeUI(selector = "#custom_popup")
     id <- as.numeric(input$calendar_id_click$id)
+    
+
     # Get the appropriate line clicked
     sched <- global$data[global$data$id == id, ]
+    
+    popup <- list()
+    popup$LIT <- list()
+    popup$LIT$nutr_before <- tags$div("Ggf. Nüchtern")
+    popup$LIT$nutr_during <- tags$div("Wasser")
+    popup$LIT$nutr_after <- tags$div("Recovery Shake (Eiweiß) + ggf. Carb wenn CarbSpeicher aufgefüllt werden sollen.")
+    popup$LIT$watt_table <- tagList(c("Bleibe zwischen 130-200 Watt."), br())
+    popup$LIT$faq <- tags$ul(
+      tags$li(tags$a("Kann ich härter fahren?", href = "https://www.google.de", target = "_blank")),
+      tags$li(tags$a("Sollte ich ein Warmup machen?", href = "https://www.google.de", target = "_blank")),
+      tags$li(tags$a("Muss ich das Ausfahren machen?", href = "https://www.google.de", target = "_blank"))
+    )
+    
+    popup$HIT <- list()
+    popup$HIT$nutr_before <- tags$div("High Carb ")
+    popup$HIT$nutr_during <- tags$div("Carbs: 60-90g ")
+    popup$HIT$nutr_after <- tags$div("Recovery Shake (Eiweiß) + ggf. Carb wenn CarbSpeicher aufgefüllt werden sollen.")
+    popup$HIT$faq <- tags$ul(
+      tags$li(tags$a("Kann ich härter fahren?", href = "https://www.google.de", target = "_blank")),
+      tags$li(tags$a("Muss ich das Warmup machen?", href = "https://www.google.de", target = "_blank")),
+      tags$li(tags$a("Muss ich das Ausfahren machen?", href = "https://www.google.de", target = "_blank"))
+    )
+    popup$HIT$watt_table <- tagList(
+      tags$b("Werte: "),
+    HTML('<style type="text/css">
+.tg  {border-collapse:collapse;border-spacing:0;}
+.tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+  overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+  font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg .tg-kusv{background-color:#fffe65;border-color:inherit;text-align:left;vertical-align:top}
+.tg .tg-kusv1{background-color:#ffffff;border-color:inherit;text-align:left;vertical-align:top}
+.tg .tg-xwmr{background-color:#34ff34;border-color:inherit;text-align:left;vertical-align:top}
+.tg .tg-tw5s{background-color:#fe0000;border-color:inherit;text-align:left;vertical-align:top}
+</style>
+<table class="tg">
+<tbody>
+  <tr>
+    <td class="tg-kusv1">5min</th>
+    <td class="tg-kusv1">3min</td>
+    <td class="tg-kusv1">3min</td>
+    <td class="tg-kusv1">3min</td>
+    <td class="tg-kusv1">3min</td>
+    <td class="tg-kusv1">3min</td>    
+    <td class="tg-kusv1">4min</td>
+    <td class="tg-kusv1">2min</td>    
+    <td class="tg-kusv1">4min</td>
+    <td class="tg-kusv1">2min</td>    
+    <td class="tg-kusv1">4min</td>
+    <td class="tg-kusv1">2min</td>    
+    <td class="tg-kusv1">4min</td>
+    <td class="tg-kusv1">2min</td>    
+    <td class="tg-kusv1">15min</td>    
+  </tr>
+  <tr>
+    <td class="tg-kusv">100 Watt</th>
+    <td class="tg-kusv">130 Watt</td>
+    <td class="tg-kusv">160 Watt</td>
+    <td class="tg-kusv">190 Watt</td>
+    <td class="tg-kusv">220 Watt</td>
+    <td class="tg-kusv">130 Watt</td>
+    <td class="tg-tw5s">300 Watt</td>
+    <td class="tg-xwmr">130 Watt</td>
+    <td class="tg-tw5s">300 Watt</td>
+    <td class="tg-xwmr">130 Watt</td>
+    <td class="tg-tw5s">300 Watt</td>
+    <td class="tg-xwmr">130 Watt</td>
+    <td class="tg-tw5s">300 Watt</td>
+    <td class="tg-xwmr">130 Watt</td>
+    <td class="tg-kusv">180 Watt</td>
+  </tr>
+</tbody>
+</table>')
+)
     
     insertUI(
       selector = "body",
@@ -209,9 +294,10 @@ server <- function(input, output, session) {
         top = input$calendar_id_click$y,
         left = input$calendar_id_click$x, 
         draggable = FALSE,
-        width = "300px",
+        width = "700px",
+        height = "300px",
         tags$div(
-          style = "width: 250px; position: relative; background: #FFF; padding: 10px; box-shadow: 0px 0.2em 0.4em rgb(0, 0, 0, 0.8); border-radius: 5px;",
+          style = "heigt: 250px; width: 700px; position: relative; background: #FFF; padding: 10px; box-shadow: 0px 0.2em 0.4em rgb(0, 0, 0, 0.8); border-radius: 5px;",
           actionLink(
             inputId = "close_calendar_panel", 
             label = NULL, icon = icon("close"), 
@@ -220,10 +306,24 @@ server <- function(input, output, session) {
           tags$br(),
           tags$div(
             style = "text-align: center;",
+            tags$b("Einheit: "),
             tags$p(
               global$data$title[id]
             )
-          )
+          ),
+          br(),
+          popup[[global$data$type[id]]]$watt_table,
+          
+          tags$b("Ernährung: (Vor Einheit)"),
+          popup[[global$data$type[id]]]$nutr_before,
+          tags$b("Ernährung: (während Einheit)"),
+          popup[[global$data$type[id]]]$nutr_during,
+          tags$b("Ernährung: (Nach Einheit)"),
+          popup[[global$data$type[id]]]$nutr_after,
+          br(),
+          br(),
+          tags$b("FAQ:"),
+          popup[[global$data$type[id]]]$faq
         )
       )
     )
