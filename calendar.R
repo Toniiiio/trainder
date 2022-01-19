@@ -41,13 +41,14 @@ gen_session_details <- function(title){
 
 
 ui <- fluidPage(
-  tags$h2("calendar shiny example"),
+  tags$h4("Training calendar"),
   useShinyjs(),
   
   # tags$head(),
   fluidRow(
     column(
       width = 12,
+      checkboxInput("show_food", "Essenshinweise zeigen", value = FALSE), br(),
       calendarOutput("my_calendar")
     )
   )
@@ -72,11 +73,15 @@ data <- block_template_vo2_1
 data$id <- seq_len(nrow(data))
 data$type <- ifelse(grepl(pattern = "HIT", data$title), "HIT", "LIT")
 
+data2 <- data
+data2$title <- ifelse(data2$type == "HIT", "High Carb essen", no = "Ggf. Low Carb essen")
+data2$start <- data2$start - 1
+data2$end <- data2$end - 1
+
 js_current_date <- "
-var elements = document.getElementsByTagName('body');
-elements.addEventListener('click', function(el) {
-  Shiny.onInputChange('body_clicked', Math.random());
-});
+document.onclick = function(){
+  Shiny.onInputChange('document_clicked', Math.random());
+}
 
 // get date
 var elements = document.getElementsByClassName('tui-full-calendar-weekday-grid-line  tui-full-calendar-near-month-day');
@@ -113,6 +118,14 @@ server <- function(input, output, session) {
   session$onFlushed( function(){
     shinyjs::runjs(js_current_date)
   }, once = FALSE )
+  
+  observe({
+    if(input$show_food){
+      global$data <- rbind(data, data2)      
+    }else{
+      global$data <- data
+    }
+  })
   
   observe({
     print(input$body_cliked)
@@ -166,7 +179,7 @@ server <- function(input, output, session) {
     
   })
   
-  observeEvent(input$submit, {
+  observeEvent(c(input$submit, input$document_clicked), {
     removeModal()
     global$name <- input$name
     global$state <- input$state
@@ -188,6 +201,7 @@ server <- function(input, output, session) {
     )
     
     add$title <- input$title #paste(input$sport_type, input$duration, "min")
+    req(global$click_date)
     add$start <- paste0("2022-01-", rep(0, 2 - nchar(global$click_date)), global$click_date) %>% as.Date
     add$end <- paste0("2022-01-", rep(0, 2 - nchar(global$click_date)), global$click_date) %>% as.Date
     isolate(global$data <- rbind(add, global$data))
@@ -209,7 +223,7 @@ server <- function(input, output, session) {
     removeUI(selector = "#custom_popup")
     id <- as.numeric(input$calendar_id_click$id)
     
-
+    
     # Get the appropriate line clicked
     sched <- global$data[global$data$id == id, ]
     
@@ -218,7 +232,8 @@ server <- function(input, output, session) {
     popup$LIT$nutr_before <- tags$div("Ggf. Nüchtern")
     popup$LIT$nutr_during <- tags$div("Wasser")
     popup$LIT$nutr_after <- tags$div("Recovery Shake (Eiweiß) + ggf. Carb wenn CarbSpeicher aufgefüllt werden sollen.")
-    popup$LIT$watt_table <- tagList(c("Bleibe zwischen 130-200 Watt."), br())
+    popup$LIT$tf <- c()
+    popup$LIT$watt_table <- tagList(tags$b("Werte: "), br(), c("Bleibe zwischen 130-200 Watt."), br())
     popup$LIT$faq <- tags$ul(
       tags$li(tags$a("Kann ich härter fahren?", href = "https://www.google.de", target = "_blank")),
       tags$li(tags$a("Sollte ich ein Warmup machen?", href = "https://www.google.de", target = "_blank")),
@@ -229,6 +244,7 @@ server <- function(input, output, session) {
     popup$HIT$nutr_before <- tags$div("High Carb ")
     popup$HIT$nutr_during <- tags$div("Carbs: 60-90g ")
     popup$HIT$nutr_after <- tags$div("Recovery Shake (Eiweiß) + ggf. Carb wenn CarbSpeicher aufgefüllt werden sollen.")
+    popup$HIT$tf <- tagList(tags$b("Trittfrequenz: "), tags$div("TF: 90-110 U/min"))
     popup$HIT$faq <- tags$ul(
       tags$li(tags$a("Kann ich härter fahren?", href = "https://www.google.de", target = "_blank")),
       tags$li(tags$a("Muss ich das Warmup machen?", href = "https://www.google.de", target = "_blank")),
@@ -236,7 +252,7 @@ server <- function(input, output, session) {
     )
     popup$HIT$watt_table <- tagList(
       tags$b("Werte: "),
-    HTML('<style type="text/css">
+      HTML('<style type="text/css">
 .tg  {border-collapse:collapse;border-spacing:0;}
 .tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
   overflow:hidden;padding:10px 5px;word-break:normal;}
@@ -285,15 +301,15 @@ server <- function(input, output, session) {
   </tr>
 </tbody>
 </table>')
-)
+    )
     
     insertUI(
       selector = "body",
       ui = absolutePanel(
         id = "custom_popup",
-        top = input$calendar_id_click$y,
-        left = input$calendar_id_click$x, 
-        draggable = FALSE,
+        top = "15%",
+        left = "33%", 
+        draggable = TRUE,
         width = "700px",
         height = "300px",
         tags$div(
@@ -313,7 +329,7 @@ server <- function(input, output, session) {
           ),
           br(),
           popup[[global$data$type[id]]]$watt_table,
-          
+          popup[[global$data$type[id]]]$tf,
           tags$b("Ernährung: (Vor Einheit)"),
           popup[[global$data$type[id]]]$nutr_before,
           tags$b("Ernährung: (während Einheit)"),
