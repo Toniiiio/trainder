@@ -5,7 +5,7 @@ library(toastui)
 # follow up: https://cfss.uchicago.edu/setup/git-with-rstudio/
 # https://github.com/settings/profile
 
-source("C:/R/data.R")
+source("data.R")
 start_date <- as.Date("2022-01-03")
 block_template_vo2_1$start <- block_template_vo2_1$date_diff + start_date
 block_template_vo2_1$end <- block_template_vo2_1$date_diff + start_date
@@ -17,6 +17,7 @@ gen_session_details <- function(title){
     "4_4min_HIT" = data.frame(
       title = "4_4min_HIT",
       duration = 60,
+      type = "HIT",
       description = "Vortag: Kohlenhydratspeicher im Vorfeld auffüllen.
                    Verpflegung: Kohlenhydratreich.
                    Ablauf: 10min Aufwärmen per Stufen, 4min @300W, 2min Pause @140W. Wiederhole 4 Mal." 
@@ -24,12 +25,14 @@ gen_session_details <- function(title){
     "3_13_30_15_HIT" = data.frame(
       title = "3_13_30_15_HIT",
       duration = 60,
+      type = "HIT",
       description = "Vortag: Kohlenhydratspeicher im Vorfeld auffüllen.
                    Verpflegung: Kohlenhydratreich.
                    Ablauf: 10min Aufwärmen per Stufen, 30sec @330W, 15sec Pause @140W. Wiederhole 13 Mal." 
     ),
     "2h_LIT" = data.frame(
       title = "2h_LIT",
+      type = "LIT",
       duration = 120,
       description = "Ggf. ersten 60min nüchtern. Ggf. Koffeein/Teein zuführen. Slow Carb zuführen." 
     )
@@ -54,19 +57,19 @@ ui <- fluidPage(
   )
 )
 
-data <- data.frame(
-  calendarId = integer(),
-  title = character(),
-  body = character(),
-  recurrenceRule = character(),
-  start = character(),
-  end = character(),         
-  category = character(),
-  location = character(),
-  bgColor = character(),
-  color = character(),
-  borderColor = character()
-)
+# data <- data.frame(
+#   calendarId = integer(),
+#   title = character(),
+#   body = character(),
+#   recurrenceRule = character(),
+#   start = character(),
+#   end = character(),         
+#   category = character(),
+#   location = character(),
+#   bgColor = character(),
+#   color = character(),
+#   borderColor = character()
+# )
 
 # data <- cal_demo_data()[1, ]
 data <- block_template_vo2_1
@@ -77,6 +80,19 @@ data2 <- data
 data2$title <- ifelse(data2$type == "HIT", "High Carb essen", no = "Ggf. Low Carb essen")
 data2$start <- data2$start - 1
 data2$end <- data2$end - 1
+
+js_mark_dates <- function(date_nr, color = "green"){paste0("
+var elements = document.getElementsByClassName('tui-full-calendar-weekday-grid-line  tui-full-calendar-near-month-day');
+for (var nr = 0; nr < elements.length; nr++) {
+  elements[nr].addEventListener('click', function(el) {
+    var target = el.target;
+    Shiny.onInputChange('clicked_data', {val: target.textContent, rand: Math.random()});
+  });
+  if(nr == ", date_nr,"){
+    console.log(elements[nr].style['background-color'] = '", color,"')
+  }
+}")}
+
 
 js_current_date <- "
 document.onclick = function(){
@@ -164,6 +180,8 @@ server <- function(input, output, session) {
           
           tagList(
             textInput('title', 'Title', value = sel$title),
+            selectInput("session_type", "Choose session type:",
+                        c("HIT", "LIT", "VLamax", "Other"), selected = sel$type),
             numericInput('duration', 'Duration in minutes', sel$duration, min = 1, max = 600),
             textAreaInput("description", "Description", sel$description) #, width = "300px"
           )
@@ -179,7 +197,7 @@ server <- function(input, output, session) {
     
   })
   
-  observeEvent(c(input$submit, input$document_clicked), {
+  observeEvent(req(input$submit), { #, input$document_clicked
     removeModal()
     global$name <- input$name
     global$state <- input$state
@@ -197,13 +215,19 @@ server <- function(input, output, session) {
       color = NA,
       borderColor = NA,
       date_diff = NA,
-      id = nrow(global$data) + 1
+      id = nrow(global$data) + 1,
+      type = NA
     )
     
-    add$title <- input$title #paste(input$sport_type, input$duration, "min")
+    add$type <- ifelse(is.null(input$session_type), "template", input$session_type)
+    title <- ifelse(is.null(input$title), "template", input$title)
+    add$title <- title #paste(input$sport_type, input$duration, "min")
     req(global$click_date)
     add$start <- paste0("2022-01-", rep(0, 2 - nchar(global$click_date)), global$click_date) %>% as.Date
     add$end <- paste0("2022-01-", rep(0, 2 - nchar(global$click_date)), global$click_date) %>% as.Date
+    print("a")
+    print(str(add))
+    print(str(global$data))
     isolate(global$data <- rbind(add, global$data))
     print(global$data %>% dput)
   })
@@ -231,7 +255,7 @@ server <- function(input, output, session) {
     popup$LIT <- list()
     popup$LIT$nutr_before <- tags$div("Ggf. Nüchtern")
     popup$LIT$nutr_during <- tags$div("Wasser")
-    popup$LIT$nutr_after <- tags$div("Recovery Shake (Eiweiß) + ggf. Carb wenn CarbSpeicher aufgefüllt werden sollen.")
+    popup$LIT$nutr_after <- tags$div("Recovery Shake (Eiweiß) + ggf. Carbs, wenn CarbSpeicher aufgefüllt werden sollen.")
     popup$LIT$tf <- c()
     popup$LIT$watt_table <- tagList(tags$b("Werte: "), br(), c("Bleibe zwischen 130-200 Watt."), br())
     popup$LIT$faq <- tags$ul(
@@ -354,25 +378,42 @@ server <- function(input, output, session) {
     rv$id <- input$calendar_id_click$id
     rv$status <- input$status
   })
+
   
   observe({
-    req(!is.na(input$row_idx))
-    req(input$row_idx)
-    start_month <- format(as.Date(input$my_calendar_dates$start),"%m")
-    current_month <- format(as.Date(input$my_calendar_dates$current),"%m")
-    end_month <- format(as.Date(input$my_calendar_dates$end),"%m")
-    row_nr = input$row_idx
-    val = gsub(input$clicked_data$val, pattern = "\n| ", replacement = "") %>% as.numeric
-    req(!is.na(val))
-    if(row_nr %in% c(0, 1) & val > 16){
-      month = start_month
-    }else if(row_nr %in% c(4, 5) & val < 16){
-      month = end_month
-    }else{
-      month = current_month
-    }
-    print(month)
-    print(val)
+    req(input$my_calendar_dates)
+    dates <- lapply(input$my_calendar_dates, as.Date)
+    global$current_dates <- seq(from = dates$start, to = dates$end, "days")
+  })
+  
+  observe({
+    req(global$current_dates)
+    workout_day <- as.Date("2022-01-20")
+    day_to_mark <- which(global$current_dates == workout_day) - 1
+    
+    shinyjs::runjs(js_mark_dates(day_to_mark, color = "green"))
+  })
+  
+  
+  observe({
+
+    # req(!is.na(input$row_idx))
+    # req(input$row_idx)
+    # start_month <- format(as.Date(input$my_calendar_dates$start),"%m")
+    # current_month <- format(as.Date(input$my_calendar_dates$current),"%m")
+    # end_month <- format(as.Date(input$my_calendar_dates$end),"%m")
+    # row_nr = input$row_idx
+    # val = gsub(input$clicked_data$val, pattern = "\n| ", replacement = "") %>% as.numeric
+    # req(!is.na(val))
+    # if(row_nr %in% c(0, 1) & val > 16){
+    #   month = start_month
+    # }else if(row_nr %in% c(4, 5) & val < 16){
+    #   month = end_month
+    # }else{
+    #   month = current_month
+    # }
+    # print(month)
+    # print(val)
   })
   
   output$click <- renderPrint({
