@@ -6,7 +6,7 @@ library(toastui)
 # https://github.com/settings/profile
 
 source("data.R")
-start_date <- as.Date("2022-01-03")
+start_date <- as.Date("2022-02-01")
 block_template_vo2_1$start <- block_template_vo2_1$date_diff + start_date
 block_template_vo2_1$end <- block_template_vo2_1$date_diff + start_date
 
@@ -49,11 +49,20 @@ ui <- fluidPage(
   
   # tags$head(),
   fluidRow(
-    column(
-      width = 12,
-      checkboxInput("show_food", "Essenshinweise zeigen", value = FALSE), br(),
-      calendarOutput("my_calendar")
+    column(width = 1,
+           checkboxInput("show_food", "Show food:", value = FALSE)
+    ),
+    column(width = 2,
+           selectInput("view", label = "View:", choices = c("month", "week", "day"))
+    ),
+    column(width = 2,
+           fileInput("file1", "Choose  File",
+                     multiple = FALSE,
+                     accept = ".fit")
     )
+  ),
+  fluidRow(
+    calendarOutput("my_calendar")
   )
 )
 
@@ -83,18 +92,49 @@ data2$end <- data2$end - 1
 
 js_mark_dates <- function(date_nr, color = "green"){paste0("
 var elements = document.getElementsByClassName('tui-full-calendar-weekday-grid-line  tui-full-calendar-near-month-day');
+var elements2 = document.getElementsByClassName('tui-full-calendar-weekday-grid-header');
+
 for (var nr = 0; nr < elements.length; nr++) {
   elements[nr].addEventListener('click', function(el) {
     var target = el.target;
     Shiny.onInputChange('clicked_data', {val: target.textContent, rand: Math.random()});
   });
   if(nr == ", date_nr,"){
-    console.log(elements[nr].style['background-color'] = '", color,"')
+    elements[nr].style['background-color'] = '", color,"'
+    
+    container = elements2[nr].getElementsByTagName('span')[0]
+    container.style.textAlign= 'center';
+    container.style.width = '240px'
+    var div = document.createElement('div');
+    var htmlString = '<i class=\"fa fa-sun\" role=\"presentation\" aria-label=\"sun icon\"></i>'
+    //var htmlString = '<i class=\"fa fa-cloud\" role=\"presentation\" aria-label=\"cloud icon\"></i>'
+    div.innerHTML = htmlString.trim();
+    div.style.float = 'right'
+    div.style.marginRight = '5px';
+    div.style.marginTop = '5px';
+    container.appendChild(div);
+    
   }
 }")}
 
 
 js_current_date <- "
+var elements_title = document.getElementsByClassName('tui-full-calendar-weekday-schedule-title');
+for (var i = 0; i < elements_title.length; i++) {
+  container = elements_title[i].parentNode
+  container.style.textAlign= 'center';
+  elements_title[i].style.float = 'left'
+  var div = document.createElement('div');
+  var htmlString = '<i class=\"fa fa-bicycle\" role=\"presentation\" aria-label=\"bicycle icon\"></i>'
+  
+  div.innerHTML = htmlString.trim();
+  div.style.float = 'left'
+  div.style.marginLeft = '2px';
+  container.appendChild(div);
+};
+
+
+
 document.onclick = function(){
   Shiny.onInputChange('document_clicked', Math.random());
 }
@@ -133,7 +173,7 @@ server <- function(input, output, session) {
   
   session$onFlushed( function(){
     shinyjs::runjs(js_current_date)
-  }, once = FALSE )
+  }, once = TRUE)
   
   observe({
     if(input$show_food){
@@ -156,13 +196,16 @@ server <- function(input, output, session) {
       gsub(pattern = " |\n", replacement = "") %>% 
       as.numeric
     
+    #sun
+    #cloud-rain
+    #cloud
     isolate({
       out <- showModal(modalDialog(
         tags$h2('Choose your exercise:'),
         radioButtons("sport_type", "Choose one:", inline = TRUE,
                      choiceNames = list(
-                       icon("bicycle"),
-                       icon("running"),
+                       icon("bicycle"), 
+                       icon("running"), 
                        icon("skiing-nordic"),
                        icon("swimming"),
                        icon("dumbbell")
@@ -233,7 +276,7 @@ server <- function(input, output, session) {
   })
   
   output$my_calendar <- renderCalendar({
-    calendar(global$data, navigation = TRUE, useDetailPopup = FALSE) %>% 
+    calendar(global$data, navigation = TRUE, useDetailPopup = FALSE, view = input$view) %>% 
       cal_events(
         clickSchedule = JS(
           "function(event) {", 
@@ -388,7 +431,7 @@ server <- function(input, output, session) {
   
   observe({
     req(global$current_dates)
-    workout_day <- as.Date("2022-01-20")
+    workout_day <- as.Date("2022-02-05")
     day_to_mark <- which(global$current_dates == workout_day) - 1
     
     shinyjs::runjs(js_mark_dates(day_to_mark, color = "green"))
