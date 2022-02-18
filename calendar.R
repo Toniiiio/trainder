@@ -6,6 +6,7 @@ library(toastui)
 # https://github.com/settings/profile
 
 source("data.R")
+source("load_strava.R")
 start_date <- as.Date("2022-02-01")
 block_template_vo2_1$start <- block_template_vo2_1$date_diff + start_date
 block_template_vo2_1$end <- block_template_vo2_1$date_diff + start_date
@@ -166,6 +167,28 @@ server <- function(input, output, session) {
   
   global <- reactiveValues(data = data)
   #//var rows = document.getElementById('my_calendar').getElementsByClassName('tui-full-calendar-month-week-item');
+  
+  observeEvent(input$file1, {
+    print(input$file1)
+    if(!is.null(input$file1)){
+      global$uploaded <- parse_strava(input$file1$datapath)
+    }
+    # 
+  })
+  
+  observeEvent(req(global$uploaded), {
+    duration <- global$uploaded$meta$duration
+    planned <- 120
+    green <- abs(duration - planned) / planned < 0.5
+    
+    workout_day <- global$uploaded$meta$date
+    day_to_mark <- which(global$current_dates == workout_day) - 1
+    
+    shinyjs::runjs(js_mark_dates(day_to_mark, color = "green"))
+    
+    print("green")
+    print(green)
+  })
   
   session$onSessionEnded(function() {
     stopApp()
