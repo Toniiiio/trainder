@@ -1,6 +1,8 @@
 library(shiny)
 library(shinyjs)
 library(toastui)
+library(waiter)
+library(shinycssloaders)
 
 # follow up: https://cfss.uchicago.edu/setup/git-with-rstudio/
 # https://github.com/settings/profile
@@ -10,7 +12,7 @@ source("load_strava.R")
 start_date <- as.Date("2022-02-01")
 block_template_vo2_1$start <- block_template_vo2_1$date_diff + start_date
 block_template_vo2_1$end <- block_template_vo2_1$date_diff + start_date
-
+options(spinner.color="#0275D8", spinner.color.background="#ffffff", spinner.size=2)
 
 gen_session_details <- function(title){
   
@@ -47,6 +49,7 @@ gen_session_details <- function(title){
 ui <- fluidPage(
   tags$h4("Training calendar"),
   useShinyjs(),
+  useWaitress(),
   
   # tags$head(),
   fluidRow(
@@ -63,7 +66,7 @@ ui <- fluidPage(
     )
   ),
   fluidRow(
-    calendarOutput("my_calendar")
+    withSpinner(calendarOutput("my_calendar"), type = 2)
   )
 )
 
@@ -135,6 +138,13 @@ for (var i = 0; i < elements_title.length; i++) {
 };
 
 
+elems = document.getElementById('aaa')
+elems[0].addEventListener('click', function(el) {
+  var target = el.target;
+  Shiny.onInputChange('user_data', {val: target.textContent, rand: Math.random()});
+});
+
+
 
 document.onclick = function(){
   Shiny.onInputChange('document_clicked', Math.random());
@@ -165,30 +175,23 @@ for (var i = 0; i < elements.length; i++) {
 
 server <- function(input, output, session) {
   
-  global <- reactiveValues(data = data)
+  global <- reactiveValues(data = data, calendar_updated = TRUE)
   #//var rows = document.getElementById('my_calendar').getElementsByClassName('tui-full-calendar-month-week-item');
+  
+  
+  observe({
+    print(input$user_data)
+  })
   
   observeEvent(input$file1, {
     print(input$file1)
     if(!is.null(input$file1)){
+      global$calendar_updated <- FALSE
       global$uploaded <- parse_strava(input$file1$datapath)
     }
     # 
   })
   
-  observeEvent(req(global$uploaded), {
-    duration <- global$uploaded$meta$duration
-    planned <- 120
-    green <- abs(duration - planned) / planned < 0.5
-    
-    workout_day <- global$uploaded$meta$date
-    day_to_mark <- which(global$current_dates == workout_day) - 1
-    
-    shinyjs::runjs(js_mark_dates(day_to_mark, color = "green"))
-    
-    print("green")
-    print(green)
-  })
   
   session$onSessionEnded(function() {
     stopApp()
@@ -206,9 +209,6 @@ server <- function(input, output, session) {
     }
   })
   
-  observe({
-    print(input$body_cliked)
-  })
   
   observe({
     
@@ -298,7 +298,24 @@ server <- function(input, output, session) {
     print(global$data %>% dput)
   })
   
+  observeEvent(req(global$uploaded), {
+    duration <- global$uploaded$meta$duration
+    planned <- 120
+    green <- abs(duration - planned) / planned < 0.5
+    
+    workout_day <- global$uploaded$meta$date
+    day_to_mark <- which(global$current_dates == workout_day) - 1
+    
+    shinyjs::runjs(js_mark_dates(day_to_mark, color = "green"))
+    global$calendar_updated <- TRUE
+    print("green")
+    print(green)
+  })
+  
   output$my_calendar <- renderCalendar({
+    
+    req(global$calendar_updated == TRUE)
+    
     calendar(global$data, navigation = TRUE, useDetailPopup = FALSE, view = input$view) %>% 
       cal_events(
         clickSchedule = JS(
@@ -329,6 +346,42 @@ server <- function(input, output, session) {
       tags$li(tags$a("Sollte ich ein Warmup machen?", href = "https://www.google.de", target = "_blank")),
       tags$li(tags$a("Muss ich das Ausfahren machen?", href = "https://www.google.de", target = "_blank"))
     )
+    popup$LIT$meta <- HTML(paste0('
+    <style type="text/css">
+.tg  {border-collapse:collapse;border-spacing:0;}
+.tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+  overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+  font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg .tg-0lax{text-align:left;vertical-align:top}
+</style>
+    <table class="tg">
+<thead>
+  <tr>
+    <th class="tg-0lax"></th>
+    <th class="tg-0lax">Planned</th>
+    <th class="tg-0lax">Actual</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td class="tg-0lax">Time</td>
+    <td class="tg-0lax">2:00:00</td>
+    <td class="tg-0lax"><div contenteditable>2:03:20</div></td>
+  </tr>
+  <tr>
+    <td class="tg-0lax">TSS</td>
+    <td class="tg-0lax">100</td>
+    <td class="tg-0lax"><div contenteditable>102</div></td>
+  </tr>
+    <tr>
+    <td class="tg-0lax">IF</td>
+    <td class="tg-0lax">0.9</td>
+    <td class="tg-0lax"><div contenteditable>0.91</div></td>
+  </tr>
+</tbody>
+</table>
+                             '))
     
     popup$HIT <- list()
     popup$HIT$nutr_before <- tags$div("High Carb ")
@@ -393,6 +446,44 @@ server <- function(input, output, session) {
 </table>')
     )
     
+    popup$HIT$meta <- HTML(paste0('
+    <style type="text/css">
+.tg  {border-collapse:collapse;border-spacing:0;}
+.tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+  overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+  font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
+.tg .tg-0lax{text-align:left;vertical-align:top}
+</style>
+    <table class="tg">
+<thead>
+  <tr>
+    <th class="tg-0lax"></th>
+    <th class="tg-0lax">Planned</th>
+    <th class="tg-0lax">Actual</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td class="tg-0lax">Time</td>
+    <td class="tg-0lax">2:00:00</td>
+    <td class="tg-0lax"><div contenteditable id = "user_time">2:03:20</div></td>
+  </tr>
+  <tr>
+    <td class="tg-0lax">TSS</td>
+    <td class="tg-0lax">100</td>
+    <td class="tg-0lax"><div contenteditable id = "user_tss">102</div></td>
+  </tr>
+    <tr>
+    <td class="tg-0lax">IF</td>
+    <td class="tg-0lax">0.9</td>
+    <td class="tg-0lax"><div contenteditable id = "user_if">0.91</div></td>
+  </tr>
+</tbody>
+</table>
+                             '))
+    
+    
     insertUI(
       selector = "body",
       ui = absolutePanel(
@@ -427,6 +518,7 @@ server <- function(input, output, session) {
           tags$b("Ernährung: (Nach Einheit)"),
           popup[[global$data$type[id]]]$nutr_after,
           br(),
+          div(popup[[global$data$type[id]]]$meta, id = "aaa", onclick = "alert(2)"),
           br(),
           tags$b("FAQ:"),
           popup[[global$data$type[id]]]$faq
@@ -434,6 +526,8 @@ server <- function(input, output, session) {
       )
     )
   })
+  
+  onevent("input", "aaa", print("text"))
   
   observeEvent(input$close_calendar_panel, {
     removeUI(selector = "#custom_popup")
