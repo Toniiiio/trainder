@@ -1,0 +1,30 @@
+tags$div(
+  style = "heigt: 250px; width: 700px; position: relative; background: #FFF; padding: 10px; box-shadow: 0px 0.2em 0.4em rgb(0, 0, 0, 0.8); border-radius: 5px;",
+  actionLink(
+    inputId = "close_calendar_panel", 
+    label = NULL, icon = icon("close"), 
+    style = "position: absolute; top: 5px; right: 5px;"
+  ),
+  tags$br(),
+  tags$div(
+    style = "text-align: center;",
+    tags$b("Einheit: "),
+    tags$p(
+      global$data$title[id]
+    )
+  ),
+  br(),
+  popup[[global$data$type[id]]]$watt_table,
+  popup[[global$data$type[id]]]$tf,
+  tags$b("Ernährung: (Vor Einheit)"),
+  popup[[global$data$type[id]]]$nutr_before,
+  tags$b("Ernährung: (während Einheit)"),
+  popup[[global$data$type[id]]]$nutr_during,
+  tags$b("Ernährung: (Nach Einheit)"),
+  popup[[global$data$type[id]]]$nutr_after,
+  br(),
+  div(popup[[global$data$type[id]]]$meta, id = "aaa"),
+  br(),
+  tags$b("FAQ:"),
+  popup[[global$data$type[id]]]$faq
+)

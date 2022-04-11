@@ -1,9 +1,10 @@
 #remotes::install_github("grimbough/FITfileR")
+#devtools::install("biketrainr-master")
 library(FITfileR)
 library(magrittr)
 library(tidyverse)
 
-# file_name <- "4_4min_Wahoo_Kickr_Core.fit"
+file_name <- "Lunch_Ride.fit"
 # file_name <- "C:/Users/User11/Downloads" %>%
 #   {file.path(., list.files(.))} %>%
 #   file.info() %>%

@@ -4,6 +4,8 @@ library(toastui)
 library(waiter)
 library(shinycssloaders)
 
+options(shiny.error = browser)
+
 # follow up: https://cfss.uchicago.edu/setup/git-with-rstudio/
 # https://github.com/settings/profile
 
@@ -48,6 +50,7 @@ gen_session_details <- function(title){
 
 ui <- fluidPage(
   tags$h4("Training calendar"),
+  HTML('<div contenteditable id = "user_time2">2:03:20</div>'),
   useShinyjs(),
   useWaitress(),
   
@@ -119,6 +122,7 @@ for (var nr = 0; nr < elements.length; nr++) {
     container.appendChild(div);
     
   }
+  console.log(2)
 }")}
 
 
@@ -136,19 +140,6 @@ for (var i = 0; i < elements_title.length; i++) {
   div.style.marginLeft = '2px';
   container.appendChild(div);
 };
-
-
-elems = document.getElementById('aaa')
-elems[0].addEventListener('click', function(el) {
-  var target = el.target;
-  Shiny.onInputChange('user_data', {val: target.textContent, rand: Math.random()});
-});
-
-
-
-document.onclick = function(){
-  Shiny.onInputChange('document_clicked', Math.random());
-}
 
 // get date
 var elements = document.getElementsByClassName('tui-full-calendar-weekday-grid-line  tui-full-calendar-near-month-day');
@@ -171,7 +162,6 @@ for (var i = 0; i < elements.length; i++) {
   });
 }
 "
-
 
 server <- function(input, output, session) {
   
@@ -304,10 +294,10 @@ server <- function(input, output, session) {
     green <- abs(duration - planned) / planned < 0.5
     
     workout_day <- global$uploaded$meta$date
-    day_to_mark <- which(global$current_dates == workout_day) - 1
+    global$day_to_mark <- which(global$current_dates == workout_day) - 1
     
-    shinyjs::runjs(js_mark_dates(day_to_mark, color = "green"))
     global$calendar_updated <- TRUE
+    Sys.sleep(0.5)
     print("green")
     print(green)
   })
@@ -315,6 +305,11 @@ server <- function(input, output, session) {
   output$my_calendar <- renderCalendar({
     
     req(global$calendar_updated == TRUE)
+    if(!is.null(global$day_to_mark)){
+      print(global$day_to_mark)
+      shinyjs::runjs(js_mark_dates(5, color = "green"))
+      print("dingggg")
+    }
     
     calendar(global$data, navigation = TRUE, useDetailPopup = FALSE, view = input$view) %>% 
       cal_events(
@@ -382,7 +377,7 @@ server <- function(input, output, session) {
 </tbody>
 </table>
                              '))
-    
+
     popup$HIT <- list()
     popup$HIT$nutr_before <- tags$div("High Carb ")
     popup$HIT$nutr_during <- tags$div("Carbs: 60-90g ")
@@ -414,16 +409,16 @@ server <- function(input, output, session) {
     <td class="tg-kusv1">3min</td>
     <td class="tg-kusv1">3min</td>
     <td class="tg-kusv1">3min</td>
-    <td class="tg-kusv1">3min</td>    
+    <td class="tg-kusv1">3min</td>
     <td class="tg-kusv1">4min</td>
-    <td class="tg-kusv1">2min</td>    
+    <td class="tg-kusv1">2min</td>
     <td class="tg-kusv1">4min</td>
-    <td class="tg-kusv1">2min</td>    
+    <td class="tg-kusv1">2min</td>
     <td class="tg-kusv1">4min</td>
-    <td class="tg-kusv1">2min</td>    
+    <td class="tg-kusv1">2min</td>
     <td class="tg-kusv1">4min</td>
-    <td class="tg-kusv1">2min</td>    
-    <td class="tg-kusv1">15min</td>    
+    <td class="tg-kusv1">2min</td>
+    <td class="tg-kusv1">15min</td>
   </tr>
   <tr>
     <td class="tg-kusv">100 Watt</th>
@@ -445,7 +440,7 @@ server <- function(input, output, session) {
 </tbody>
 </table>')
     )
-    
+
     popup$HIT$meta <- HTML(paste0('
     <style type="text/css">
 .tg  {border-collapse:collapse;border-spacing:0;}
@@ -467,7 +462,7 @@ server <- function(input, output, session) {
   <tr>
     <td class="tg-0lax">Time</td>
     <td class="tg-0lax">2:00:00</td>
-    <td class="tg-0lax"><div contenteditable id = "user_time">2:03:20</div></td>
+    <td class="tg-0lax"><div contenteditable id = "user_tim3e">2:03:20</div></td>
   </tr>
   <tr>
     <td class="tg-0lax">TSS</td>
@@ -482,8 +477,9 @@ server <- function(input, output, session) {
 </tbody>
 </table>
                              '))
-    
-    
+
+    # popup <- read_lines("popup2.html") %>% paste(collapse = "")
+
     insertUI(
       selector = "body",
       ui = absolutePanel(
@@ -525,9 +521,34 @@ server <- function(input, output, session) {
         )
       )
     )
+
+    shinyjs::runjs(paste0("
+      console.log(99)
+      container = document.getElementsByTagName('body')[0]
+      console.log(21)
+      var htmlString = \"", popup, "\"
+      var div = document.createElement('div');
+      div.innerHTML = htmlString.trim();
+      div.style.float = 'right'
+      div.style.marginRight = '5px';
+      div.style.marginTop = '5px';
+      container.appendChild(div);
+      console.log(22)
+      console.log(23);
+      div.addEventListener('input', function() {
+        alert('input event fired');
+      }, false);
+    "))
+    
+    
+    
   })
   
-  onevent("input", "aaa", print("text"))
+  # document.getElementById("editor").addEventListener("input", function() {
+  #   console.log("input event fired");
+  # }, false);
+  
+  onevent(event = "input", id = "user_time2", print("text"))
   
   observeEvent(input$close_calendar_panel, {
     removeUI(selector = "#custom_popup")
