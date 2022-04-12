@@ -38,6 +38,8 @@ shinyApp(
   
   server = function(input, output) {
     
+    global <- reactiveValues()
+    
     dataModal <- function(failed = FALSE) {
       
       output$hottable <- renderRHandsontable({

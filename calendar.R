@@ -4,7 +4,7 @@ library(toastui)
 library(waiter)
 library(shinycssloaders)
 
-options(shiny.error = browser)
+# options(shiny.error = browser)
 
 # follow up: https://cfss.uchicago.edu/setup/git-with-rstudio/
 # https://github.com/settings/profile
@@ -50,7 +50,6 @@ gen_session_details <- function(title){
 
 ui <- fluidPage(
   tags$h4("Training calendar"),
-  HTML('<div contenteditable id = "user_time2">2:03:20</div>'),
   useShinyjs(),
   useWaitress(),
   
@@ -341,42 +340,6 @@ server <- function(input, output, session) {
       tags$li(tags$a("Sollte ich ein Warmup machen?", href = "https://www.google.de", target = "_blank")),
       tags$li(tags$a("Muss ich das Ausfahren machen?", href = "https://www.google.de", target = "_blank"))
     )
-    popup$LIT$meta <- HTML(paste0('
-    <style type="text/css">
-.tg  {border-collapse:collapse;border-spacing:0;}
-.tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
-  overflow:hidden;padding:10px 5px;word-break:normal;}
-.tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
-  font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
-.tg .tg-0lax{text-align:left;vertical-align:top}
-</style>
-    <table class="tg">
-<thead>
-  <tr>
-    <th class="tg-0lax"></th>
-    <th class="tg-0lax">Planned</th>
-    <th class="tg-0lax">Actual</th>
-  </tr>
-</thead>
-<tbody>
-  <tr>
-    <td class="tg-0lax">Time</td>
-    <td class="tg-0lax">2:00:00</td>
-    <td class="tg-0lax"><div contenteditable>2:03:20</div></td>
-  </tr>
-  <tr>
-    <td class="tg-0lax">TSS</td>
-    <td class="tg-0lax">100</td>
-    <td class="tg-0lax"><div contenteditable>102</div></td>
-  </tr>
-    <tr>
-    <td class="tg-0lax">IF</td>
-    <td class="tg-0lax">0.9</td>
-    <td class="tg-0lax"><div contenteditable>0.91</div></td>
-  </tr>
-</tbody>
-</table>
-                             '))
 
     popup$HIT <- list()
     popup$HIT$nutr_before <- tags$div("High Carb ")
@@ -388,157 +351,64 @@ server <- function(input, output, session) {
       tags$li(tags$a("Muss ich das Warmup machen?", href = "https://www.google.de", target = "_blank")),
       tags$li(tags$a("Muss ich das Ausfahren machen?", href = "https://www.google.de", target = "_blank"))
     )
-    popup$HIT$watt_table <- tagList(
-      tags$b("Werte: "),
-      HTML('<style type="text/css">
-.tg  {border-collapse:collapse;border-spacing:0;}
-.tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
-  overflow:hidden;padding:10px 5px;word-break:normal;}
-.tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
-  font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
-.tg .tg-kusv{background-color:#fffe65;border-color:inherit;text-align:left;vertical-align:top}
-.tg .tg-kusv1{background-color:#ffffff;border-color:inherit;text-align:left;vertical-align:top}
-.tg .tg-xwmr{background-color:#34ff34;border-color:inherit;text-align:left;vertical-align:top}
-.tg .tg-tw5s{background-color:#fe0000;border-color:inherit;text-align:left;vertical-align:top}
-</style>
-<table class="tg">
-<tbody>
-  <tr>
-    <td class="tg-kusv1">5min</th>
-    <td class="tg-kusv1">3min</td>
-    <td class="tg-kusv1">3min</td>
-    <td class="tg-kusv1">3min</td>
-    <td class="tg-kusv1">3min</td>
-    <td class="tg-kusv1">3min</td>
-    <td class="tg-kusv1">4min</td>
-    <td class="tg-kusv1">2min</td>
-    <td class="tg-kusv1">4min</td>
-    <td class="tg-kusv1">2min</td>
-    <td class="tg-kusv1">4min</td>
-    <td class="tg-kusv1">2min</td>
-    <td class="tg-kusv1">4min</td>
-    <td class="tg-kusv1">2min</td>
-    <td class="tg-kusv1">15min</td>
-  </tr>
-  <tr>
-    <td class="tg-kusv">100 Watt</th>
-    <td class="tg-kusv">130 Watt</td>
-    <td class="tg-kusv">160 Watt</td>
-    <td class="tg-kusv">190 Watt</td>
-    <td class="tg-kusv">220 Watt</td>
-    <td class="tg-kusv">130 Watt</td>
-    <td class="tg-tw5s">300 Watt</td>
-    <td class="tg-xwmr">130 Watt</td>
-    <td class="tg-tw5s">300 Watt</td>
-    <td class="tg-xwmr">130 Watt</td>
-    <td class="tg-tw5s">300 Watt</td>
-    <td class="tg-xwmr">130 Watt</td>
-    <td class="tg-tw5s">300 Watt</td>
-    <td class="tg-xwmr">130 Watt</td>
-    <td class="tg-kusv">180 Watt</td>
-  </tr>
-</tbody>
-</table>')
-    )
 
-    popup$HIT$meta <- HTML(paste0('
-    <style type="text/css">
-.tg  {border-collapse:collapse;border-spacing:0;}
-.tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
-  overflow:hidden;padding:10px 5px;word-break:normal;}
-.tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
-  font-weight:normal;overflow:hidden;padding:10px 5px;word-break:normal;}
-.tg .tg-0lax{text-align:left;vertical-align:top}
-</style>
-    <table class="tg">
-<thead>
-  <tr>
-    <th class="tg-0lax"></th>
-    <th class="tg-0lax">Planned</th>
-    <th class="tg-0lax">Actual</th>
-  </tr>
-</thead>
-<tbody>
-  <tr>
-    <td class="tg-0lax">Time</td>
-    <td class="tg-0lax">2:00:00</td>
-    <td class="tg-0lax"><div contenteditable id = "user_tim3e">2:03:20</div></td>
-  </tr>
-  <tr>
-    <td class="tg-0lax">TSS</td>
-    <td class="tg-0lax">100</td>
-    <td class="tg-0lax"><div contenteditable id = "user_tss">102</div></td>
-  </tr>
-    <tr>
-    <td class="tg-0lax">IF</td>
-    <td class="tg-0lax">0.9</td>
-    <td class="tg-0lax"><div contenteditable id = "user_if">0.91</div></td>
-  </tr>
-</tbody>
-</table>
-                             '))
-
-    # popup <- read_lines("popup2.html") %>% paste(collapse = "")
-
-    insertUI(
-      selector = "body",
-      ui = absolutePanel(
-        id = "custom_popup",
-        top = "15%",
-        left = "33%", 
-        draggable = TRUE,
-        width = "700px",
-        height = "300px",
-        tags$div(
-          style = "heigt: 250px; width: 700px; position: relative; background: #FFF; padding: 10px; box-shadow: 0px 0.2em 0.4em rgb(0, 0, 0, 0.8); border-radius: 5px;",
-          actionLink(
-            inputId = "close_calendar_panel", 
-            label = NULL, icon = icon("close"), 
-            style = "position: absolute; top: 5px; right: 5px;"
-          ),
-          tags$br(),
-          tags$div(
-            style = "text-align: center;",
-            tags$b("Einheit: "),
-            tags$p(
-              global$data$title[id]
-            )
-          ),
-          br(),
-          popup[[global$data$type[id]]]$watt_table,
-          popup[[global$data$type[id]]]$tf,
-          tags$b("Ernährung: (Vor Einheit)"),
-          popup[[global$data$type[id]]]$nutr_before,
-          tags$b("Ernährung: (während Einheit)"),
-          popup[[global$data$type[id]]]$nutr_during,
-          tags$b("Ernährung: (Nach Einheit)"),
-          popup[[global$data$type[id]]]$nutr_after,
-          br(),
-          div(popup[[global$data$type[id]]]$meta, id = "aaa", onclick = "alert(2)"),
-          br(),
-          tags$b("FAQ:"),
-          popup[[global$data$type[id]]]$faq
+    dataModal <- function(failed = FALSE) {
+      
+      df <- data.frame(planned = c(100, 60, "", 100, 30, 5), actual = c(89, 58, 0.8, 98, 28, 3))
+      rownames(df) <- c("TSS", "Duration", "IF", "kcal", "carbs", "fat")
+      
+      output$hottable <- renderRHandsontable({
+        rhandsontable(df, format = '0a')
+      })
+      
+      id = 1
+      
+      modalDialog(
+        tabsetPanel(
+          tabPanel("Summary",         rHandsontableOutput("hottable"),
+                   
+                   popup[[global$data$type[id]]]$tf,
+                   tags$b("Ernährung: (Vor Einheit)"),
+                   popup[[global$data$type[id]]]$nutr_before,
+                   tags$b("Ernährung: (während Einheit)"),
+                   popup[[global$data$type[id]]]$nutr_during,
+                   tags$b("Ernährung: (Nach Einheit)"),
+                   popup[[global$data$type[id]]]$nutr_after,
+                   br(),
+                   div(popup[[global$data$type[id]]]$meta, id = "aaa", onclick = "alert(2)"),
+                   br(),
+                   tags$b("FAQ:"),
+                   popup[[global$data$type[id]]]$faq)
+        ),
+        tabPanel("Charts", h4("a")),
+        
+        footer = tagList(
+          modalButton("Cancel"),
+          actionButton(inputId = "ok", label = "Save & Close")
         )
       )
-    )
-
-    shinyjs::runjs(paste0("
-      console.log(99)
-      container = document.getElementsByTagName('body')[0]
-      console.log(21)
-      var htmlString = \"", popup, "\"
-      var div = document.createElement('div');
-      div.innerHTML = htmlString.trim();
-      div.style.float = 'right'
-      div.style.marginRight = '5px';
-      div.style.marginTop = '5px';
-      container.appendChild(div);
-      console.log(22)
-      console.log(23);
-      div.addEventListener('input', function() {
-        alert('input event fired');
-      }, false);
-    "))
+    }
+    
+    showModal(dataModal())
+    
+    
+    # shinyjs::runjs(paste0("
+    #   console.log(99)
+    #   container = document.getElementsByTagName('body')[0]
+    #   console.log(21)
+    #   var htmlString = \"", popup, "\"
+    #   var div = document.createElement('div');
+    #   div.innerHTML = htmlString.trim();
+    #   div.style.float = 'right'
+    #   div.style.marginRight = '5px';
+    #   div.style.marginTop = '5px';
+    #   container.appendChild(div);
+    #   console.log(22)
+    #   console.log(23);
+    #   div.addEventListener('input', function() {
+    #     alert('input event fired');
+    #   }, false);
+    # "))
     
     
     
@@ -552,6 +422,10 @@ server <- function(input, output, session) {
   
   observeEvent(input$close_calendar_panel, {
     removeUI(selector = "#custom_popup")
+  })
+  
+  observeEvent(input$ok, {
+    removeModal()
   })
   
   rv <- reactiveValues(id = NULL, status = NULL)
