@@ -1,5 +1,6 @@
 #remotes::install_github("grimbough/FITfileR")
 #devtools::install("biketrainr-master")
+library(remotes)
 library(FITfileR)
 library(magrittr)
 library(tidyverse)

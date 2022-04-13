@@ -3,6 +3,7 @@ library(shinyjs)
 library(toastui)
 library(waiter)
 library(shinycssloaders)
+library(rhandsontable)
 
 # options(shiny.error = browser)
 
