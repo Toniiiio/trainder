@@ -12,6 +12,7 @@ library(rhandsontable)
 
 source("data.R")
 source("load_strava.R")
+source("key_performance_chart.R")
 start_date <- as.Date("2022-02-01")
 block_template_vo2_1$start <- block_template_vo2_1$date_diff + start_date
 block_template_vo2_1$end <- block_template_vo2_1$date_diff + start_date
@@ -69,7 +70,10 @@ ui <- fluidPage(
     )
   ),
   fluidRow(
-    withSpinner(calendarOutput("my_calendar"), type = 2)
+    withSpinner(
+      column(width = 10, calendarOutput("my_calendar")),
+    type = 2),
+    uiOutput("calendar_sidebar")
   )
 )
 
@@ -167,8 +171,7 @@ server <- function(input, output, session) {
   
   global <- reactiveValues(data = data, calendar_updated = TRUE)
   #//var rows = document.getElementById('my_calendar').getElementsByClassName('tui-full-calendar-month-week-item');
-  
-  
+
   observe({
     print(input$user_data)
   })
@@ -198,7 +201,34 @@ server <- function(input, output, session) {
       global$data <- data
     }
   })
-  
+
+  output$calendar_sidebar <- renderUI({
+    column(width = 2,
+           fluidRow(
+             div(style = "height:82px;"),
+           ),
+           fluidRow(
+             div(style = "height:85px;background-color: #e9f5f8;", h5(tags$b("TSS:"), " 20"), h5(tags$b("Time:"), " 1:20h"), h5(tags$b("HIT/LIT:"), " 90/10"))
+           ),
+           fluidRow(
+             div(style = "height:85px;background-color: #e9f5f8;", h5(tags$b("TSS:"), " 20"), h5(tags$b("Time:"), " 1:20h"), h5(tags$b("HIT/LIT:"), " 90/10"))
+           ),
+           fluidRow(
+             div(style = "height:85px;background-color: #e9f5f8;", h5(tags$b("TSS:"), " 20"), h5(tags$b("Time:"), " 1:20h"), h5(tags$b("HIT/LIT:"), " 90/10"))
+           ),
+           fluidRow(
+             div(style = "height:85px;background-color: #e9f5f8;", h5(tags$b("TSS:"), " 20"), h5(tags$b("Time:"), " 1:20h"), h5(tags$b("HIT/LIT:"), " 90/10"))
+           ),
+           fluidRow(
+             div(style = "height:85px;background-color: #e9f5f8;", h5(tags$b("TSS:"), " 20"), h5(tags$b("Time:"), " 1:20h"), h5(tags$b("HIT/LIT:"), " 90/10"))
+           ),
+           fluidRow(
+             div(style = "height:85px;background-color: #e9f5f8;", h5(tags$b("TSS:"), " 20"), h5(tags$b("Time:"), " 1:20h"), h5(tags$b("HIT/LIT:"), " 90/10"))
+           )
+    )
+  })
+    
+    
   
   observe({
     
@@ -214,6 +244,8 @@ server <- function(input, output, session) {
     #cloud
     isolate({
       out <- showModal(modalDialog(
+        div(style = ";background-color: #e9f5f8;",
+            
         tags$h2('Choose your exercise:'),
         radioButtons("sport_type", "Choose one:", inline = TRUE,
                      choiceNames = list(
@@ -248,7 +280,7 @@ server <- function(input, output, session) {
           actionButton('submit', 'Submit'),
           modalButton('cancel')
         )
-      ))
+      )))
     })
     
   })
@@ -289,7 +321,7 @@ server <- function(input, output, session) {
   })
   
   observeEvent(req(global$uploaded), {
-    duration <- global$uploaded$meta$duration
+    duration <- global$uploaded$meta$duration # or better take amount of units?
     planned <- 120
     green <- abs(duration - planned) / planned < 0.5
     
@@ -300,6 +332,23 @@ server <- function(input, output, session) {
     Sys.sleep(0.5)
     print("green")
     print(green)
+    
+    records <- global$uploaded$records
+    has_power <- !is.null(records$power)
+    
+    if(has_power){
+      secs <- length(records$power)
+      NP <- calc_NP(watts = records$power)
+      TSS <- calc_tss(FTP = 270, NP = NP, sec = secs)
+      print("TSS")
+      print(TSS)
+    }
+
+
+
+    
+    
+    
   })
   
   output$my_calendar <- renderCalendar({

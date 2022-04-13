@@ -28,9 +28,6 @@ calc_NP <- function(watts, np_ma_amt_days = 30){
 # str$records
 # mean(records$power)
 
-NP <- calc_NP(watts = records$power)
-secs <- length(records$power)
-TSS <- calc_tss(FTP = 270, NP = NP, sec = secs)
 
 calc_tss <- function(FTP = 270, NP = 184, sec){
   # TSS = (sec * NP * IF)/(FTP * 3600) * 100
@@ -38,6 +35,11 @@ calc_tss <- function(FTP = 270, NP = 184, sec){
   TSS = sec*NP^2 / (FTP^2 * 3600)*100
   TSS
 }
+
+NP <- calc_NP(watts = records$power)
+secs <- length(records$power)
+TSS <- calc_tss(FTP = 270, NP = NP, sec = secs)
+
 
 start_date <- as.Date("2022-03-27") - 1
 end_date <- Sys.Date() + 1
@@ -90,16 +92,14 @@ TSB
 
 d <- data.frame(CTL, ATL, TSB, TSS)
 
-library(xts)
-library(dygraphs)
-dygraph(as.xts(d), main = "Performance Chart") %>%
-  dySeries("TSS", drawPoints = TRUE,  color = "red", strokeWidth = 0) %>%
-  dySeries("ATL", color = "purple") %>%
-  dySeries("CTL", fillGraph = TRUE,  color = "blue") %>% 
-  dySeries("TSB", color = "yellow") #%>% 
+dont_run <- function(){
+  library(xts)
+  library(dygraphs)
+  dygraph(as.xts(d), main = "Performance Chart") %>%
+    dySeries("TSS", drawPoints = TRUE,  color = "red", strokeWidth = 0) %>%
+    dySeries("ATL", color = "purple") %>%
+    dySeries("CTL", fillGraph = TRUE,  color = "blue") %>%
+    dySeries("TSB", color = "yellow") #%>%
   #dyOptions(fillGraph = TRUE, fillAlpha = 0.4)
+}
 
-
-dygraph(lungDeaths, main = "Deaths from Lung Disease (UK)") %>%
-  dySeries("mdeaths", drawPoints = TRUE, pointShape = "square", color = "blue") %>%
-  dySeries("fdeaths", stepPlot = TRUE, fillGraph = TRUE, color = "red")
