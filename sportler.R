@@ -33,6 +33,7 @@
 
 
 library(R6)
+source("load_strava.R")
 
 cyclist <- R6::R6Class("Cyclist", list(
   FTP = 240,
@@ -46,7 +47,7 @@ cyclist <- R6::R6Class("Cyclist", list(
 
 
 cyclist$set("public", "calc_NP", function(watts){
-  (mean(caTools::runmean(watts, np_ma_amt_days)^4))^0.25 
+  (mean(caTools::runmean(watts, self$config$np_ma_amt_days)^4))^0.25 
 })
 
 
@@ -64,7 +65,8 @@ cyclist$set("public", "add_workout", function(){
   NP <- self$calc_NP(self$workout$records$power)
   
   has_workouts <- length(self$workouts)
-  workout_date = workout$meta$date
+  workout_date = self$workout$meta$date
+  
   if(!has_workouts){
     start_date <- workout_date - 1
     end_date <- Sys.Date() + 1
@@ -74,21 +76,65 @@ cyclist$set("public", "add_workout", function(){
     self$meta <- data.frame(
       dates = dates,
       TSS = rep(0, n_dates),
-      CTL = rep(self$ctl_start_val, n_dates),
-      ATL = rep(self$atl_start_val, n_dates),
+      CTL = rep(self$config$ctl_start_val, n_dates),
+      ATL = rep(self$config$atl_start_val, n_dates),
       TSB = rep(0, n_dates)
     )
     
     self$meta$TSS[length(self$meta$TSS)] <- NA
     
-    TSS = n_secs*NP^2 / (self$FTP^2 * 3600)*100
-    self$meta[self$meta$dates == workout_date, ]$TSS = TSS
+  }else{
     
+    workout_duplicate <- sum(sapply(self$workouts, identical, y = self$workout))
+    message("Workout was already uploaded!")
+    
+    # also take if it is equal to lowest values, since one day before is required for CTL and ATL values.
+    require_update <-  workout_date <= min(cyclist_1$meta$dates)
+    
+    if(require_update){
+      dates <- seq.Date((workout_date - 1), min(cyclist_1$meta$dates), "days")
+      n_dates <- length(dates)
+      meta_to_add <- data.frame(
+        dates = dates,
+        TSS = rep(0, n_dates),
+        CTL = rep(self$config$ctl_start_val, n_dates),
+        ATL = rep(self$config$atl_start_val, n_dates),
+        TSB = rep(0, n_dates)
+      )
+      self$meta <- rbind(
+        meta_to_add,
+        self$meta
+      )
+    }
+
   }
   
-  self$calc_tss(NP, n_secs, workout_date = workout_date)
+  max_date <- max(self$meta$dates)
+  req_end_date <- Sys.Date() + 1
+  req_prolong <- max_date < req_end_date
+  if(req_prolong){
+    dates <- seq.Date((workout_date - 1), min(cyclist_1$meta$dates), "days")
+    n_dates <- length(dates)
+    meta_to_add <- data.frame(
+      dates = dates,
+      TSS = rep(0, n_dates),
+      CTL = rep(self$config$ctl_start_val, n_dates),
+      ATL = rep(self$config$atl_start_val, n_dates),
+      TSB = rep(0, n_dates)
+    )
+    self$meta <- rbind(
+      self$meta,
+      meta_to_add
+    )
+  }
   
-  print(self$calc_meta())
+  TSS = n_secs*NP^2 / (self$FTP^2 * 3600)*100
+  self$meta[self$meta$dates == workout_date, ]$TSS <- TSS
+  
+  
+  self$workouts <- c(self$workouts, self$workout)
+  
+  self$calc_meta()
 })
 
 
@@ -105,19 +151,20 @@ cyclist$set("public", "calc_meta", function(){
   }
   print(self$meta$ATL)
   
-  TSB_calc = CTL - ATL
+  TSB_calc = self$meta$CTL - self$meta$ATL
   self$meta$TSB <- c(0, TSB_calc[-length(TSB_calc)])
-  print(self$meta)
   
 })
 
 
 cyclist_1 = cyclist$new()
+# cyclist_1$file_name <- "biketrainr-master/data/02_04_2022_LIT.fit"
 cyclist_1$file_name <- "biketrainr-master/data/27_03_2022.fit"
 cyclist_1$add_workout()
+cyclist_1$meta
 
-
-
+# saveRDS(cyclist_1, file = "cyclist_1.RData")
+# load("cyclist_1.RData")
 
 
 
