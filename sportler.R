@@ -31,19 +31,40 @@
 #             add TSS and recalculate.
 
 
+# Storing data
+# Requirements:
+# 1. TSS, CTL, ASB and ATL per day --> meta
+# 2. TSS, IF, Duration, etc. per workout (can have multiple workouts per day) --> workout_details
+# 3. Check if workout was already uploaded --> workouts
+
 
 library(R6)
+library(lubridate)
 source("load_strava.R")
+source("biketrainr-master/R/gen_energy_data.R")
 
-cyclist <- R6::R6Class("Cyclist", list(
-  FTP = 240,
-  file_name= NULL,
-  workout = NULL,
-  meta = NULL,
-  workouts = list(),
-  config = list(np_ma_amt_days = 30, ctl_avg_amt_days = 42, atl_avg_amt_days = 7,
-                ctl_start_val = 70, atl_start_val = 70)
-))
+user_name <- "Toniiiio"
+
+cyclist <- R6::R6Class(
+  classname = "Cyclist", 
+  public = list(
+    FTP = 240,
+    file_names = NULL,
+    workout = NULL,
+    meta = NULL,
+    watt = NULL,
+    workout_details = data.frame(
+      id = character(0),
+      duration = numeric(0),
+      TSS = numeric(0),
+      IF = numeric(0),
+      file_name = character(0)
+    ),
+    workouts = list(),
+    config = list(np_ma_amt_days = 30, ctl_avg_amt_days = 42, atl_avg_amt_days = 7,
+                  ctl_start_val = 70, atl_start_val = 70)
+  )
+)
 
 
 cyclist$set("public", "calc_NP", function(watts){
@@ -57,12 +78,69 @@ cyclist$set("public", "calc_tss", function(NP = 184, sec, workout_date){
   self$meta[self$meta$dates == workout_date, ]$TSS = sec*NP^2 / (self$FTP^2 * 3600)*100
 })
 
-cyclist$set("public", "add_workout", function(){
+cyclist$set("public", "watt_quality_check", function(){
+  missing_power <- self$watt == 65535
+  if(sum(missing_power)){
+    message("Performing Watt quality check.")
+    message("Detecting watt values equal to 65535.")
+    message("Probably connection to Wahoo kickr core was temporarily timeout out.")
+    message("Replacing 65535 with 0.")
+    self$watt[missing_power] <- 0 
+  }
   
-  self$workout <- parse_strava(self$file_name)
+})
+
+
+cyclist$set("public", "upload_workouts", function(){
+  for(file_name in self$file_names){
+    print(file_name)
+    self$add_workout(file_name)
+  }
+})
+
+cyclist$set("public", "create_watt", function(hr){
+  
+  nrg = create_nrg()
+  nrg$hr <- round(nrg$hr)
+  nrg$power <- nrg$watt
+  nrg[nrg$hr < 80, "watt"] <- 0
+  nrg$heart_rate <- nrg$hr
+  
+  has_hr <- !is.null(self$workout$records$heart_rate)
+  if(!has_hr){
+    
+    message("Could not find any heart rate data. Set all watt values to 100.")
+    self$watt <- rep(100, nrow(self$workout$records))
+    
+  }else{
+    self$workout$records <- plyr::join(self$workout$records, nrg, by = "heart_rate")
+    has_cadence <- !is.null(self$workout$records$cadence)
+    if(has_cadence){
+      self$workout[self$workout$records$cadence == 0, "power"] <- 0
+    }
+    self$watt <- self$workout$records$power
+  }
+  
+})
+
+
+
+cyclist$set("public", "add_workout", function(file_name){
+  
+  self$workout <- parse_strava(file_name)
+  self$watt <- self$workout$records$power
+  
+  no_watts <- is.null(self$watt)
+  if(no_watts) self$create_watt(self$workout$records$heart_rate)
+  
+  self$watt_quality_check()
+  
   # approximation n = amount secs
-  n_secs <- length(self$workout$records$power)
-  NP <- self$calc_NP(self$workout$records$power)
+  n_secs <- length(self$watt)
+  
+  duration <- gsub(pattern = "d |H |M ", replacement = ":", x = lubridate::seconds_to_period(n_secs))
+  duration <- gsub(pattern = "S", replacement = "", x = duration)
+  NP <- self$calc_NP(self$watt)
   
   has_workouts <- length(self$workouts)
   workout_date = self$workout$meta$date
@@ -89,10 +167,10 @@ cyclist$set("public", "add_workout", function(){
     message("Workout was already uploaded!")
     
     # also take if it is equal to lowest values, since one day before is required for CTL and ATL values.
-    require_update <-  workout_date <= min(cyclist_1$meta$dates)
+    require_update <-  workout_date <= min(self$meta$dates)
     
     if(require_update){
-      dates <- seq.Date((workout_date - 1), min(cyclist_1$meta$dates), "days")
+      dates <- seq.Date((workout_date - 1), min(self$meta$dates), "days")
       n_dates <- length(dates)
       meta_to_add <- data.frame(
         dates = dates,
@@ -113,7 +191,7 @@ cyclist$set("public", "add_workout", function(){
   req_end_date <- Sys.Date() + 1
   req_prolong <- max_date < req_end_date
   if(req_prolong){
-    dates <- seq.Date((workout_date - 1), min(cyclist_1$meta$dates), "days")
+    dates <- seq.Date((workout_date - 1), min(self$meta$dates), "days")
     n_dates <- length(dates)
     meta_to_add <- data.frame(
       dates = dates,
@@ -130,11 +208,25 @@ cyclist$set("public", "add_workout", function(){
   
   TSS = n_secs*NP^2 / (self$FTP^2 * 3600)*100
   self$meta[self$meta$dates == workout_date, ]$TSS <- TSS
-  
+  self$calc_meta()
   
   self$workouts <- c(self$workouts, self$workout)
   
-  self$calc_meta()
+  workout_details_add <- data.frame(
+    id = paste0(user_name, "_", nrow(self$workout_details) + 1),
+    date = workout_date,
+    duration = duration,
+    n_secs = n_secs,
+    TSS = TSS,
+    IF = NP/self$FTP,
+    NP = NP,
+    file_name = file_name
+  )
+  
+  self$workout_details <- rbind(self$workout_details, workout_details_add)
+  
+  
+
 })
 
 
@@ -144,12 +236,10 @@ cyclist$set("public", "calc_meta", function(){
   for(nr in 2:n){
     self$meta$CTL[nr] <- self$meta$CTL[nr - 1] + (self$meta$TSS[nr] - self$meta$CTL[nr - 1])/self$config$ctl_avg_amt_days 
   }
-  print(self$meta$CTL)
   
   for(nr in 2:n){
     self$meta$ATL[nr] <- self$meta$ATL[nr - 1] + (self$meta$TSS[nr] - self$meta$ATL[nr - 1])/self$config$atl_avg_amt_days
   }
-  print(self$meta$ATL)
   
   TSB_calc = self$meta$CTL - self$meta$ATL
   self$meta$TSB <- c(0, TSB_calc[-length(TSB_calc)])
@@ -157,14 +247,23 @@ cyclist$set("public", "calc_meta", function(){
 })
 
 
-cyclist_1 = cyclist$new()
-# cyclist_1$file_name <- "biketrainr-master/data/02_04_2022_LIT.fit"
-cyclist_1$file_name <- "biketrainr-master/data/27_03_2022.fit"
-cyclist_1$add_workout()
-cyclist_1$meta
+source("load_strava.R")
+source("biketrainr-master/R/gen_energy_data.R")
 
-# saveRDS(cyclist_1, file = "cyclist_1.RData")
-# load("cyclist_1.RData")
+sportler <- list(name = user_name)
+sportler$cyclist <- cyclist$new()
+
+sportler$cyclist$file_names <- "biketrainr-master/data/Morga.fit"
+path <- "biketrainr-master/data/"
+sportler$cyclist$file_names <- file.path(path, list.files(path))
+sportler$cyclist$upload_workouts()
+sportler$cyclist$meta
+sportler$cyclist$workout_details
 
 
+# saveRDS(object = sportler, file = paste0(user_name, ".RData"))
+# sportler = readRDS(file = paste0(user_name, ".RData"))
+# sportler$name
+# m <- sportler$cyclist$meta
+# sportler$cyclist$workouts
 

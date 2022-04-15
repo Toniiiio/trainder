@@ -3,12 +3,12 @@ library(remotes)
 # usethis::create_github_token()
 library(FITfileR)
 library(magrittr)
-library(tidyverse)
+library(plyr)
 
 source("R/gen_energy_data.R")
 
 file_name <- "01_04_2022_Evening_Ride.fit"
-file_name <- "31_03_2022_Lunch.fit"
+file_name <- "biketrainr-master/31_03_2022_Lunch.fit"
 # file_name <- "C:/Users/User11/Downloads" %>%
 file_name <- "data" %>%
   {file.path(., list.files(.))} %>%

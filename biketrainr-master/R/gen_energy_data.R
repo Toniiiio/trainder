@@ -72,6 +72,8 @@ create_nrg <- function(){
 
   return(nrg)
 }
+
+
 #
 # plot(nrg$carbs)
 # plot(nrg$fat, type = "l")

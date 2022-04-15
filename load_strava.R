@@ -3,7 +3,7 @@
 library(remotes)
 library(FITfileR)
 library(magrittr)
-library(tidyverse)
+library(plyr)
 
 file_name <- "Lunch_Ride.fit"
 # file_name <- "C:/Users/User11/Downloads" %>%
