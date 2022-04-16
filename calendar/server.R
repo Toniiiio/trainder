@@ -124,7 +124,7 @@ server <- function(input, output, session) {
   
   
   output$my_calendar <- renderCalendar({
-    cal <- calendar(data = global$data,
+    cal <- calendar(data = cal_demo_data(), #global$data
                     defaultDate = Sys.Date(), # global$current_date --> lets the adding of new schedules by click fail 
                     navigation = TRUE, useDetailPopup = FALSE,
                     view = input$view,
@@ -135,7 +135,7 @@ server <- function(input, output, session) {
       cal_events(
         clickSchedule = JS( # required for custom popup of schedule clicks
           "function(event) {",
-          "Shiny.setInputValue('calendar_id_click', {id: event.schedule.id, x: event.event.clientX, y: event.event.clientY});",
+          "Shiny.setInputValue('calendar_id_click', {schedule: event.schedule, id: event.schedule.id, x: event.event.clientX, y: event.event.clientY});",
           "}"
         )
       )
@@ -276,9 +276,28 @@ server <- function(input, output, session) {
   })
   
   
+  #### Delete entries
+  
+  observeEvent(input$schedule_delete, {
+    
+    removeModal()
+  
+    sched <- input$calendar_id_click$schedule
+    
+    to_delete <- list(id = sched$id, title = sched$title, 
+                      location = sched$location, start = sched$start$`_date`, end = sched$end$`_date`, 
+                      isAllDay = sched$isAllDay, category = sched$category, calendarId = sched$calendarId)
+    # print(dput(to_delete))
+    # print(identical(to_delete, input$mycalendar_delete))
+    cal_proxy_delete("my_calendar", to_delete)
+  })
+  
+  
   ######## START: CUSTOM SCHEDULE CLICK POPUP #############
   
   observeEvent(input$calendar_id_click, {
+    
+    print(input$calendar_id_click)
     
     removeUI(selector = "#custom_popup")
     id <- as.numeric(input$calendar_id_click$id)
@@ -310,12 +329,14 @@ server <- function(input, output, session) {
                    div(popup[[global$data$type[id]]]$meta),
                    br(),
                    tags$b("FAQ:"),
-                   popup[[global$data$type[id]]]$faq)
+                   popup[[global$data$type[id]]]$faq
+          ),
+          tabPanel("Charts", h4("a"))
         ),
-        tabPanel("Charts", h4("a")),
         
         footer = tagList(
           modalButton("Cancel"),
+          actionButton("schedule_delete", label = "Delete"),
           actionButton(inputId = "ok", label = "Save & Close")
         )
       )

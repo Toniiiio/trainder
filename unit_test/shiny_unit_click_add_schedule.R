@@ -23,6 +23,13 @@ server <- function(input, output) {
       useNavigation = TRUE,
       isReadOnly = FALSE,
       useCreationPopup = FALSE
+    ) %>% 
+    cal_events(
+      clickSchedule = JS( # required for custom popup of schedule clicks
+        "function(event) {",
+        "Shiny.setInputValue('calendar_id_click', {schedule: event.schedule, id: event.schedule.id, x: event.event.clientX, y: event.event.clientY});",
+        "}"
+      )
     )
   })
   
@@ -92,15 +99,27 @@ server <- function(input, output) {
   })
   
   observeEvent(input$my_calendar_update, {
-    str(input$my_calendar_update)
     cal_proxy_update("my_calendar", input$my_calendar_update)
   })
   
-  observeEvent(input$my_calendar_delete, {
-    str(input$my_calendar_delete)
-    cal_proxy_delete("my_calendar", input$my_calendar_delete)
-  })
+  # observe({
+  #   print(input$calendar_id_click)
+  #   print(input$schedule$`__fe_id`)
+  #   print(input$schedule$id)
+  # })
   
+  observeEvent(input$my_calendar_delete, {
+    print(dput(input$my_calendar_delete))
+    sched <- input$calendar_id_click$schedule
+    
+    to_delete <- list(id = sched$id, title = sched$title, 
+                      location = sched$location, start = sched$start$`_date`, end = sched$end$`_date`, 
+                      isAllDay = sched$isAllDay, category = sched$category, calendarId = sched$calendarId)
+    print(dput(to_delete))
+    print(identical(to_delete, input$mycalendar_delete))
+    cal_proxy_delete("my_calendar", to_delete)
+  })
+
 }
 
 runApp(shinyApp(ui = ui, server = server), launch.browser = TRUE)
