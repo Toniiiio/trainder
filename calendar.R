@@ -274,13 +274,14 @@ server <- function(input, output, session) {
             textAreaInput("description", "Description", sel$description) #, width = "300px"
           )
           
-        }),
+        })
+        ),
         
         footer = tagList(
           actionButton('submit', 'Submit'),
           modalButton('cancel')
         )
-      )))
+      ))
     })
     
   })
@@ -344,11 +345,6 @@ server <- function(input, output, session) {
       print(TSS)
     }
 
-
-
-    
-    
-    
   })
   
   output$my_calendar <- renderCalendar({
