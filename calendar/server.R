@@ -30,10 +30,10 @@ server <- function(input, output, session) {
     reactiveValuesToList(res_auth)
   })
   
-  observeEvent(c(global$data, global$current_date),{
-    print("dsss")
-    shinyjs::runjs(js_current_date)
-  })
+  # observeEvent(c(global$data, global$current_date),{
+  #   print("dsss")
+  #   shinyjs::runjs(js_current_date)
+  # })
   
   # lets app crash in combination with shinymanager - authentication
   # session$onSessionEnded(function() {
@@ -109,22 +109,20 @@ server <- function(input, output, session) {
   })
   
   
-  # output$my_calendar <- renderCalendar({
-  #   calendar(global$data, navigation = TRUE, defaultDate = global$current_date, 
-  #            useDetailPopup = FALSE, view = input$view) %>% 
-      # cal_events(
-      #   clickSchedule = JS( # required for custom popup of schedule clicks
-      #     "function(event) {",
-      #     "Shiny.setInputValue('calendar_id_click', {id: event.schedule.id, x: event.event.clientX, y: event.event.clientY});",
-      #     "}"
-      #   )
-      # )
-  # })
+  ##### Update / stored data - when dragged
   
-  
-  
+  observeEvent(input$my_calendar_update, {
+    print("adddddded")
+    print(input$my_calendar_update)
+    update <- input$my_calendar_update
+    id <- update$schedule$id
+    global$data[global$data == id, "start"] <- update$changes$start
+    global$data[global$data == id, "end"] <- update$changes$end
+    print(global$data)
+  })
+
   output$my_calendar <- renderCalendar({
-    cal <- calendar(data = cal_demo_data(), #global$data
+    cal <- calendar(data = data, 
                     defaultDate = Sys.Date(), # global$current_date --> lets the adding of new schedules by click fail 
                     navigation = TRUE, useDetailPopup = FALSE,
                     view = input$view,
@@ -197,33 +195,27 @@ server <- function(input, output, session) {
     
   })
   
-  observeEvent(input$add_workout, {
-    
-    removeModal()
-    
-    cal_proxy_add("my_calendar", list(start = input$my_calendar_add$start, end = input$my_calendar_add$end, 
-                                      isAllDay = FALSE, category = "time", title = input$title))
-    
-  })
-  
+
   observeEvent(input$my_calendar_update, {
     str(input$my_calendar_update)
     cal_proxy_update("my_calendar", input$my_calendar_update)
   })
   
-  observeEvent(input$my_calendar_delete, {
-    str(input$my_calendar_delete)
-    cal_proxy_delete("my_calendar", input$my_calendar_delete)
-  })
+  # observeEvent(input$my_calendar_delete, {
+  #   str(input$my_calendar_delete)
+  #   cal_proxy_delete("my_calendar", input$my_calendar_delete)
+  # })
   
   
-  observeEvent(req(input$add_workout), { #, input$document_clicked
+  observeEvent(input$add_workout, {
+    print("xxxxxxxx")
     removeModal()
     global$name <- input$name
     global$state <- input$state
     
+    
     add <- data.frame(
-      calendarId = 1,
+      calendarId = max(global$data$calendarId) + 1,
       title = "dummy",
       body = "",
       recurrenceRule = "",
@@ -235,7 +227,7 @@ server <- function(input, output, session) {
       color = NA,
       borderColor = NA,
       date_diff = NA,
-      id = nrow(global$data) + 1,
+      id = max(global$data$id) + 1,
       type = NA
     )
     
@@ -244,13 +236,20 @@ server <- function(input, output, session) {
     add$type <- ifelse(is.null(input$session_type), "template", input$session_type)
     title <- ifelse(is.null(input$title), "template", input$title)
     add$title <- title #paste(input$sport_type, input$duration, "min")
-    req(global$click_date)
-    add$start <- global$current_date %>% as.Date()
-    add$end <- global$current_date %>% as.Date()
+    
+    print("input$my_calendar_add")
+    print(input$my_calendar_add)
+    added <- input$my_calendar_add
+  
+    add$start <- added$start %>% as.Date()
+    add$end <- added$end %>% as.Date()
 
-    # isolate(global$data <- rbind(add, global$data))
-    cal_proxy_add("my_calendar", list(start = "2022-04-11T12:30:00+02:00", end = "2022-04-11T13:30:00+02:00", 
-                                      isAllDay = FALSE, category = "time"))
+    isolate(global$data <- rbind(add, global$data))
+    print(global$data)
+    
+    cal_proxy_add("my_calendar", list(start = input$my_calendar_add$start, end = input$my_calendar_add$end, 
+                                      isAllDay = FALSE, category = "time", title = input$title))
+    
   })
   
   observeEvent(req(global$uploaded), {
@@ -289,6 +288,13 @@ server <- function(input, output, session) {
                       isAllDay = sched$isAllDay, category = sched$category, calendarId = sched$calendarId)
     # print(dput(to_delete))
     # print(identical(to_delete, input$mycalendar_delete))
+    
+    del_idx <- which(global$data$calendarId == sched$id)
+    print(global$data$calendarId)
+    print(del_idx)
+    global$data <- global$data[-del_idx, ]
+    print(global$data)
+    
     cal_proxy_delete("my_calendar", to_delete)
   })
   

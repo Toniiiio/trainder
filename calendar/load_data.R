@@ -12,7 +12,9 @@ options(spinner.color="#0275D8", spinner.color.background="#ffffff", spinner.siz
 
 data <- block_template_vo2_1
 data$id <- seq_len(nrow(data))
+data$calendarId <- seq_len(nrow(data))
 data$type <- ifelse(grepl(pattern = "HIT", data$title), "HIT", "LIT")
+
 
 data2 <- data
 data2$title <- ifelse(data2$type == "HIT", "High Carb essen", no = "Ggf. Low Carb essen")
