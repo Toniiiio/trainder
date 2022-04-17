@@ -30,10 +30,50 @@ server <- function(input, output, session) {
     reactiveValuesToList(res_auth)
   })
   
-  # observeEvent(c(global$data, global$current_date),{
-  #   print("dsss")
-  #   shinyjs::runjs(js_current_date)
-  # })
+  observeEvent(res_auth$user, {
+    
+    print("res_auth$user")
+    print(res_auth$user)
+    req(res_auth$user)
+    global$user_name <- res_auth$user
+    global$is_admin <- res_auth$admin
+    
+    file_name <- paste0(global$user_name, ".RData")
+    user_data_files <- list.files("user_data")
+    
+    has_file <- file_name %in% user_data_files
+    print(user_data_files)
+    
+    source("sportler.R")
+    print("has_file")
+    print(has_file)
+    if(has_file){
+      
+      global$sportler = readRDS(file = paste0(global$user_name, ".RData"))
+      
+    }else{
+      
+      global$sportler <- list(name = global$user_name)
+      global$sportler$cyclist <- cyclist$new()
+      saveRDS(object = global$sportler, file = paste0(global$user_name, ".RData"))
+      
+    }
+  })
+  
+  observeEvent(input$file1, {
+    print(input$file1)
+    if(!is.null(input$file1)){
+      
+      global$sportler$cyclist$file_names <- input$file1$datapath
+      # path <- "biketrainr-master/data/"
+      # sportler$cyclist$file_names <- file.path(path, list.files(path))
+      global$sportler$cyclist$upload_workouts()
+      print(global$sportler$cyclist$meta)
+      print(global$sportler$cyclist$workout_details)
+      saveRDS(object = global$sportler, file = paste0("user_data/", global$user_name, ".RData"))
+    }
+     
+  })
   
   # lets app crash in combination with shinymanager - authentication
   # session$onSessionEnded(function() {

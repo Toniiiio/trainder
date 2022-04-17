@@ -15,7 +15,7 @@ ui <- fluidPage(
     ),
     column(width = 2,
            fileInput("file1", "Choose  File",
-                     multiple = FALSE,
+                     multiple = TRUE,
                      accept = ".fit")
     )
   ),
