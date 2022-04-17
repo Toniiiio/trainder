@@ -9,6 +9,21 @@ credentials <- data.frame(
   stringsAsFactors = FALSE
 )
 
+data <- data.frame(
+  calendarId = numeric(),
+  title = character(),
+  body = character(),
+  recurrenceRule = character(),
+  start = character(),
+  end = character(),
+  category = character(),
+  location = character(),
+  bgColor = character(),
+  color = character(),
+  borderColor = character(),
+  date_diff = character()
+)
+
 options(scipen = 999)
 
 server <- function(input, output, session) {
@@ -18,6 +33,43 @@ server <- function(input, output, session) {
   res_auth <- secure_server(
     check_credentials = check_credentials(credentials)
   )
+  
+  ############### ADD TEMPLATE
+  
+  observeEvent(input$choose_template, {
+    
+    showModal(
+      modalDialog(
+        selectInput("template", label = "Choose template:", choices = c("week_vo2_regular", "month_vo2_block")),
+        dateInput("template_start_date", "Start date:", value = Sys.Date(), min = Sys.Date()),
+        h4("Description:"), br(), 
+        h6("Target: Vo2, Ratio: 90/10, Dauer: 1 Woche"),
+        footer = tagList(
+          actionButton('add_template', 'Add'),
+          modalButton('cancel')
+        )
+      )  
+    )
+  })
+  
+  observeEvent(input$add_template, {
+    removeModal()
+    
+    name <- paste0("template_", input$template)
+    data <- get(name)
+    template_start_date <- input$template_start_date
+    data$start <- template_start_date + data$date_diff
+    data$end <- template_start_date + data$date_diff
+    print("go")
+    for(nr in seq(nrow(data))){
+      cal_proxy_add("my_calendar", list(start = data[nr, ]$start, end = data[nr, ]$end, 
+                                        isAllDay = FALSE, category = "time", title = data[nr, ]$title))
+    }
+    print("names(data)")
+    print(names(data))
+    print(sapply(data, typeof))
+    global$data <- rbind(data, global$data)
+  })
   
   ################ TABSET PANEL: WORKOUT TABLE
   
@@ -77,12 +129,9 @@ server <- function(input, output, session) {
       
     }
     
-    print(global$sportler$cyclist$workout_details)
-    
   })
   
   observeEvent(input$file1, {
-    print(input$file1)
     if(!is.null(input$file1)){
       
       global$sportler$cyclist$file_names <- input$file1$datapath
@@ -177,13 +226,10 @@ server <- function(input, output, session) {
   ##### Update / stored data - when dragged
   
   observeEvent(input$my_calendar_update, {
-    print("adddddded")
-    print(input$my_calendar_update)
     update <- input$my_calendar_update
     id <- update$schedule$id
     global$data[global$data$id == id, "start"] <- update$changes$start %>% as.Date()
     global$data[global$data$id == id, "end"] <- update$changes$end %>% as.Date()
-    print(global$data)
   })
 
   output$my_calendar <- renderCalendar({
@@ -302,15 +348,14 @@ server <- function(input, output, session) {
     title <- ifelse(is.null(input$title), "template", input$title)
     add$title <- title #paste(input$sport_type, input$duration, "min")
     
-    print("input$my_calendar_add")
-    print(input$my_calendar_add)
     added <- input$my_calendar_add
   
     add$start <- added$start %>% as.Date()
     add$end <- added$end %>% as.Date()
 
+    print("adddd")
     isolate(global$data <- rbind(add, global$data))
-    print(global$data)
+
     
     cal_proxy_add("my_calendar", list(start = input$my_calendar_add$start, end = input$my_calendar_add$end, 
                                       isAllDay = FALSE, category = "time", title = input$title))

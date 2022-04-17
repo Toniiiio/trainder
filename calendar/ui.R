@@ -13,6 +13,9 @@ ui <- fluidPage(
                       selectInput("view", label = "View:", choices = c("month", "week", "day"))
                ),
                column(width = 2,
+                      actionButton("choose_template", "Choose template")
+               ),
+               column(width = 2,
                       fileInput("file1", "Choose  File",
                                 multiple = TRUE,
                                 accept = ".fit")

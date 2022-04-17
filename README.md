@@ -1,3 +1,3 @@
 # trainder
 
-Open source alternative to TrainingPeaks
+Open source alternative to TrainingPeaks.

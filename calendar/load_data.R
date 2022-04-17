@@ -4,22 +4,33 @@ source("calendar/load_functions.R")
 source("key_performance_chart.R")
 source("calendar/js.R")
 
-start_date <- as.Date("2022-02-01")
-block_template_vo2_1$start <- block_template_vo2_1$date_diff + start_date
-block_template_vo2_1$end <- block_template_vo2_1$date_diff + start_date
 options(spinner.color="#0275D8", spinner.color.background="#ffffff", spinner.size=2)
 
+start_date <- as.Date("2022-02-01")
+template_month_vo2_block$start <- template_month_vo2_block$date_diff + start_date
+template_month_vo2_block$end <- template_month_vo2_block$date_diff + start_date
+template_month_vo2_block$id <- seq_len(nrow(template_month_vo2_block))
+template_month_vo2_block$calendarId <- seq_len(nrow(template_month_vo2_block))
+template_month_vo2_block$type <- ifelse(grepl(pattern = "HIT", template_month_vo2_block$title), "HIT", "LIT")
 
-data <- block_template_vo2_1
-data$id <- seq_len(nrow(data))
-data$calendarId <- seq_len(nrow(data))
-data$type <- ifelse(grepl(pattern = "HIT", data$title), "HIT", "LIT")
 
 
-data2 <- data
-data2$title <- ifelse(data2$type == "HIT", "High Carb essen", no = "Ggf. Low Carb essen")
-data2$start <- data2$start - 1
-data2$end <- data2$end - 1
+template_week_vo2_regular
+template_week_vo2_regular$start <- template_week_vo2_regular$date_diff + start_date
+template_week_vo2_regular$end <- template_week_vo2_regular$date_diff + start_date
+template_week_vo2_regular$id <- seq_len(nrow(template_week_vo2_regular))
+template_week_vo2_regular$calendarId <- seq_len(nrow(template_week_vo2_regular))
+template_week_vo2_regular$type <- ifelse(grepl(pattern = "HIT", template_week_vo2_regular$title), "HIT", "LIT")
+
+template_week_vo2_regular
+
+
+#data <- template_month_vo2_block
+
+# data2 <- data
+# data2$title <- ifelse(data2$type == "HIT", "High Carb essen", no = "Ggf. Low Carb essen")
+# data2$start <- data2$start - 1
+# data2$end <- data2$end - 1
 
 popup <- list()
 popup$LIT <- list()
