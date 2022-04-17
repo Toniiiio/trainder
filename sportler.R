@@ -126,7 +126,15 @@ cyclist$set("public", "create_watt", function(hr){
 
 cyclist$set("public", "add_workout", function(file_name){
   
-  self$workout_raw <- parse_strava(file_name)
+  self$workout_raw <- tryCatch(parse_strava(file_name),
+                               error = function(e){
+                                 print(e)
+                                 message(paste0("Fit contents for file with name: ", file_name, " are not correct correct."))
+                                 return(NULL)
+                               }
+  )
+  if(is.null(self$workout_raw)) return()
+  print("rrrr")
   self$workout <- self$workout_raw
   
   workout_duplicate <- sum(as.numeric(sapply(self$workouts, function(w){
@@ -257,10 +265,17 @@ source("biketrainr-master/R/gen_energy_data.R")
 
 # sportler <- list(name = user_name)
 # sportler$cyclist <- cyclist$new()
+#  
+# file_path <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/"
+# file_name <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/2022-03-09-190632-UBERDROID7506-27-0.fit"
+# file_name <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/fitfiletools.fit"
+# all <- list.files(file_path, pattern = "*.fit")
+# exclude <- list.files(file_path, pattern = "*.gz")
 # 
-# sportler$cyclist$file_names <- "biketrainr-master/data/Morga.fit"
-# path <- "biketrainr-master/data/"
-# sportler$cyclist$file_names <- file.path(path, list.files(path)[9])
+# # sportler$cyclist$file_names <- "biketrainr-master/data/Morga.fit"
+# # path <- "biketrainr-master/data/"
+# file_name <- file.path(file_path, setdiff(all, exclude))
+# sportler$cyclist$file_names <- file_name
 # sportler$cyclist$upload_workouts()
 # sportler$cyclist$workouts
 # 
