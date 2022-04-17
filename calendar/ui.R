@@ -21,12 +21,13 @@ ui <- fluidPage(
              fluidRow(
                withSpinner(
                  column(width = 10, calendarOutput("my_calendar")),
-                 type = 2),
+                 type = 2
+               ),
                uiOutput("calendar_sidebar")
              )
     ),
     tabPanel("Workout",
-             dataTableOutput("workout_details")
+             DT::dataTableOutput("workout_details", width = "50%")
     )
   )
   

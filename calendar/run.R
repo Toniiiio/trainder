@@ -5,6 +5,7 @@ library(waiter)
 library(shinycssloaders)
 library(rhandsontable)
 library(shinymanager)
+library(DT)
 
 
 source("calendar/load_data.R", encoding = "UTF-8")

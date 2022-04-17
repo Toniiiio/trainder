@@ -158,6 +158,8 @@ cyclist$set("public", "add_workout", function(file_name){
   
   duration <- gsub(pattern = "d |H |M ", replacement = ":", x = lubridate::seconds_to_period(n_secs))
   duration <- gsub(pattern = "S", replacement = "", x = duration)
+  duration <- sapply(strsplit(duration, "[:]")[[1]], function(c) ifelse(nchar(c) == 1, paste0("0", c), c)) %>% 
+    paste(collapse = ":")# add zeros
   NP <- self$calc_NP(self$watt)
   
   has_workouts <- length(self$workouts)
@@ -287,9 +289,12 @@ source("biketrainr-master/R/gen_energy_data.R")
 # 
 # # saveRDS(object = sportler, file = paste0(user_name, ".RData"))
 
-user_name <- "shiny"
-sportler = readRDS(file = "user_data/shiny.RData")
-# sportler$name
-# m <- sportler$cyclist$meta
-sportler$cyclist$workout_details
-sportler$cyclist$workout_details
+# user_name <- "shiny"
+# sportler = readRDS(file = "user_data/shiny.RData")
+# # sportler$name
+# # m <- sportler$cyclist$meta
+# sportler$cyclist$workout_details
+# sportler$cyclist$workout_details
+
+
+

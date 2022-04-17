@@ -23,12 +23,25 @@ server <- function(input, output, session) {
   
   
   output$workout_details <- renderDataTable({
+    createLink <- function(val, type) {
+      sprintf('<a href="https://www.google.com/q=%s" target="_blank" class="btn btn-primary">%s</a>',val, type)
+    }
     df <- data.frame(global$sportler$cyclist$workout_details)
+    df$Sport <- "Radfahrt"
     df$TSS <- round(df$TSS)
     df$IF <- round(df$IF, 2)
     df$NP <- round(df$NP)
-    df[, c("date", "duration", "TSS", "IF", "NP")]
-  })
+    df$weekday <- weekdays(df$date)
+    df$delete <- createLink(df$id, "Delete")
+    df$edit <- createLink(df$id, "Edit")
+    df$link <- createLink(df$id, "View")
+    df$km <- 100.02
+    df$altitude <- 1000
+    df$title <- "title"
+    df[, c("title", "weekday", "date", "duration", "km", "altitude", "TSS", "IF", "NP", "delete", "edit", "link")]
+  }, options = list(
+    pageLength = 25
+  ), escape = FALSE)
   
   
   output$auth_output <- renderPrint({
@@ -168,8 +181,8 @@ server <- function(input, output, session) {
     print(input$my_calendar_update)
     update <- input$my_calendar_update
     id <- update$schedule$id
-    global$data[global$data == id, "start"] <- update$changes$start
-    global$data[global$data == id, "end"] <- update$changes$end
+    global$data[global$data$id == id, "start"] <- update$changes$start %>% as.Date()
+    global$data[global$data$id == id, "end"] <- update$changes$end %>% as.Date()
     print(global$data)
   })
 
