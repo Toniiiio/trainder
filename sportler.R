@@ -265,29 +265,31 @@ source("biketrainr-master/R/gen_energy_data.R")
 
 # sportler <- list(name = user_name)
 # sportler$cyclist <- cyclist$new()
-#  
-# file_path <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/"
+# # #
+# # # file_path <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/"
 # file_name <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/2022-03-09-190632-UBERDROID7506-27-0.fit"
-# file_name <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/fitfiletools.fit"
-# all <- list.files(file_path, pattern = "*.fit")
-# exclude <- list.files(file_path, pattern = "*.gz")
-# 
-# # sportler$cyclist$file_names <- "biketrainr-master/data/Morga.fit"
-# # path <- "biketrainr-master/data/"
-# file_name <- file.path(file_path, setdiff(all, exclude))
+# # # file_name <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/fitfiletools.fit"
+# # # all <- list.files(file_path, pattern = "*.fit")
+# # # exclude <- list.files(file_path, pattern = "*.gz")
+# # #
+# # # # sportler$cyclist$file_names <- "biketrainr-master/data/Morga.fit"
+# # # # path <- "biketrainr-master/data/"
+# # # file_name <- file.path(file_path, setdiff(all, exclude))
 # sportler$cyclist$file_names <- file_name
 # sportler$cyclist$upload_workouts()
-# sportler$cyclist$workouts
+# # sportler$cyclist$workouts
+# #
+# # sapply(sportler$cyclist$workouts, identical, y = sportler$cyclist$workout_raw)
 # 
-# sapply(sportler$cyclist$workouts, identical, y = sportler$cyclist$workout_raw)
-
-# sportler$cyclist$meta
+# # sportler$cyclist$meta
 # sportler$cyclist$workout_details
 # 
 # 
 # # saveRDS(object = sportler, file = paste0(user_name, ".RData"))
-# # sportler = readRDS(file = paste0(user_name, ".RData"))
+
+user_name <- "shiny"
+sportler = readRDS(file = "user_data/shiny.RData")
 # sportler$name
 # m <- sportler$cyclist$meta
-# sportler$cyclist$workouts
-
+sportler$cyclist$workout_details
+sportler$cyclist$workout_details

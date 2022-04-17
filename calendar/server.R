@@ -9,22 +9,27 @@ credentials <- data.frame(
   stringsAsFactors = FALSE
 )
 
+options(scipen = 999)
 
 server <- function(input, output, session) {
   
-  global <- reactiveValues(data = data, calendar_updated = TRUE, current_date = Sys.Date())
-  
-  # observe({
-  #   print("xxx")
-  #   shinyjs::runjs(js_mark_dates(Sys.Date(), color = "green"))
-  #   print("updated_calendar")
-  #   global$data
-  #   print(input$updated_calendar)
-  # }, priority = -1)
+  global <- reactiveValues(data = data, calendar_updated = TRUE, current_date = Sys.Date(), sportler = NULL)
   
   res_auth <- secure_server(
     check_credentials = check_credentials(credentials)
   )
+  
+  ################ TABSET PANEL: WORKOUT TABLE
+  
+  
+  output$workout_details <- renderDataTable({
+    df <- data.frame(global$sportler$cyclist$workout_details)
+    df$TSS <- round(df$TSS)
+    df$IF <- round(df$IF, 2)
+    df$NP <- round(df$NP)
+    df[, c("date", "duration", "TSS", "IF", "NP")]
+  })
+  
   
   output$auth_output <- renderPrint({
     reactiveValuesToList(res_auth)
@@ -49,15 +54,18 @@ server <- function(input, output, session) {
     print(has_file)
     if(has_file){
       
-      global$sportler = readRDS(file = paste0(global$user_name, ".RData"))
+      global$sportler = readRDS(file = paste0("user_data/", global$user_name, ".RData"))
       
     }else{
       
       global$sportler <- list(name = global$user_name)
       global$sportler$cyclist <- cyclist$new()
-      saveRDS(object = global$sportler, file = paste0(global$user_name, ".RData"))
+      saveRDS(object = global$sportler, file = paste0("user_data/", global$user_name, ".RData"))
       
     }
+    
+    print(global$sportler$cyclist$workout_details)
+    
   })
   
   observeEvent(input$file1, {
@@ -70,13 +78,17 @@ server <- function(input, output, session) {
       global$sportler$cyclist$upload_workouts()
       print(global$sportler$cyclist$meta)
       print(global$sportler$cyclist$workout_details)
-      saveRDS(object = global$sportler, file = paste0("user_data/", global$user_name, ".RData"))
+      file_name <- paste0("user_data/", global$user_name, ".RData")
+      saveRDS(object = global$sportler, file = file_name)
+      xx <- readRDS(file = file_name)
+      print(xx$cyclist$workout_details)
     }
      
   })
   
-  # lets app crash in combination with shinymanager - authentication
+  # lets app crash in combination with shinymanager - authentication???
   # session$onSessionEnded(function() {
+      # saveRDS(object = global$sportler, file = paste0("user_data/", global$user_name, ".RData"))
   #   stopApp()
   # })
   
