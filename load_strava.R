@@ -6,7 +6,7 @@ library(magrittr)
 library(plyr)
 
 file_name <- "Lunch_Ride.fit"
-file_name <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/fitfiletools.fit"
+file_name <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/Radfahrt_am_Nachmittag.fit"
 # file_name <- "C:/Users/User11/Downloads/" %>%
 #   {file.path(., list.files(.))} %>%
 #   file.info() %>%
@@ -59,18 +59,22 @@ load_strava <- function(file_name){
 # file_name <- "Radfahrt_am_Morgen.fit"
 # records <- load_strava(file_name)
 
+
+file_name <- "C:/Users/Tonio/Downloads/Feldberg_2.fit"
 parse_strava <- function(file_name){
   records <- load_strava(file_name)
   
   time_range <- records$timestamp %>% range
   hr_avg <- mean(records$heart_rate)
-  median(records$heart_rate)
-  max(records$heart_rate)
-  max(records$speed)*0.621371
   date <- as.Date(records[1, ]$timestamp)
   speed_avg <- mean(records$speed)
 
-  xx <- diff(time_range)
+  records$enhanced_altitude <- caTools::runmean(records$enhanced_altitude, 150)
+  # plot(records$enhanced_altitude, type = "l")
+  altitude_diff <- diff(records$enhanced_altitude)
+  uphill_only <- altitude_diff > 0
+  sum_altitude <- sum(altitude_diff[uphill_only])
+
   distance <- max(records$distance)
   duration <- as.numeric(xx)*60
   hours <- floor(duration/60)
@@ -82,6 +86,7 @@ parse_strava <- function(file_name){
     distance = distance,
     hours = hours,
     date = date,
+    altitude = sum_altitude,
     duration = duration,
     minutes = minutes,
     seconds = seconds,

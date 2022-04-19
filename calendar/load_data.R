@@ -1,7 +1,7 @@
 source("data.R")
 source("load_strava.R")
 source("calendar/load_functions.R")
-source("key_performance_chart.R")
+# source("key_performance_chart.R")
 source("calendar/js.R")
 
 options(spinner.color="#0275D8", spinner.color.background="#ffffff", spinner.size=2)

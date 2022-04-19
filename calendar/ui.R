@@ -1,4 +1,8 @@
 ui <- fluidPage(
+  tags$style(
+    type = 'text/css',
+    '.modal-dialog { width: fit-content !important; }'
+  ),
   tags$h4("Training calendar"),
   useShinyjs(),
   useWaitress(),

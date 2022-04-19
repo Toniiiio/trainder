@@ -65,9 +65,6 @@ server <- function(input, output, session) {
       cal_proxy_add("my_calendar", list(start = data[nr, ]$start, end = data[nr, ]$end, 
                                         isAllDay = FALSE, category = "time", title = data[nr, ]$title))
     }
-    print("names(data)")
-    print(names(data))
-    print(sapply(data, typeof))
     global$data <- rbind(data, global$data)
   })
   
@@ -115,8 +112,6 @@ server <- function(input, output, session) {
     print(user_data_files)
     
     source("sportler.R")
-    print("has_file")
-    print(has_file)
     if(has_file){
       
       global$sportler = readRDS(file = paste0("user_data/", global$user_name, ".RData"))
@@ -138,10 +133,10 @@ server <- function(input, output, session) {
       # path <- "biketrainr-master/data/"
       # sportler$cyclist$file_names <- file.path(path, list.files(path))
       global$sportler$cyclist$upload_workouts()
-      print(global$sportler$cyclist$meta)
-      print(global$sportler$cyclist$workout_details)
       file_name <- paste0("user_data/", global$user_name, ".RData")
       saveRDS(object = global$sportler, file = file_name)
+      
+      file_name <- "user_data/shiny.RData"
       xx <- readRDS(file = file_name)
       print(xx$cyclist$workout_details)
     }
@@ -256,33 +251,82 @@ server <- function(input, output, session) {
     dataModal <- function(failed = FALSE){
       modalDialog(
         div(style = ";background-color: #e9f5f8;",
-            
-            tags$h2('Choose your exercise:'),
-            radioButtons("sport_type", "Choose one:", inline = TRUE,
-                         choiceNames = list(
-                           icon("bicycle"), 
-                           icon("running"), 
-                           icon("skiing-nordic"),
-                           icon("swimming"),
-                           icon("dumbbell")
-                         ),
-                         choiceValues = list(
-                           "bike", "run", "ski", "swim", "dumbbell"
-                         )
+
+            fluidRow(
+              column(width = 3,
+                tags$h2('Choose your exercise:')
+              )
             ),
-            selectInput("template", "Choose from template:",
-                        c("4_4min_HIT", "3_13_30_15_HIT", "2h_LIT")),
-            
+            fluidRow(
+              column(width = 3,
+                     radioButtons("sport_type", "Choose activity:", inline = TRUE,
+                                  choiceNames = list(
+                                    icon("bicycle"), 
+                                    icon("running"), 
+                                    icon("skiing-nordic"),
+                                    icon("swimming"),
+                                    icon("dumbbell")
+                                  ),
+                                  choiceValues = list(
+                                    "bike", "run", "ski", "swim", "dumbbell"
+                                  )
+                     )
+              ),
+              column(width = 3,
+                     output$dasss <- renderUI({
+                       sel = gen_session_details(input$template)
+                      textInput('title', 'Title', value = sel$title)
+                     })
+              ),
+              column(width = 3,
+                     selectInput("template", "Session from template:",
+                                 c("4_4min_HIT", "3_13_30_15_HIT", "2h_LIT"))                     
+              ),
+              output$dass <- renderUI({
+                sel = gen_session_details(input$template)
+                column(width = 3,
+                       selectInput("session_type", "Choose session type:",
+                                   c("HIT", "HIT_EB", "HIT_IB", "LIT", "VLamax", "Other"), selected = sel$type)
+                )
+              })
+            ),
+
             output$das <- renderUI({
               
               sel = gen_session_details(input$template)
               
               tagList(
-                textInput('title', 'Title', value = sel$title),
-                selectInput("session_type", "Choose session type:",
-                            c("HIT", "LIT", "VLamax", "Other"), selected = sel$type),
-                numericInput('duration', 'Duration in minutes', sel$duration, min = 1, max = 600),
-                textAreaInput("description", "Description", sel$description) #, width = "300px"
+                output$dass <- renderUI({
+                  sel = gen_session_details(input$template)
+                  intervall_details <- numericInput('duration', 'Duration in minutes', sel$duration, min = 1, max = 600)
+                  if(input$session_type == "HIT_EB"){
+                    intervall_details <- tagList(
+                      fluidRow(h4("Intervall details:")),
+                      fluidRow(
+                        column(width = 2,
+                               numericInput("reps", label = "Reps:", value = 4, min = 2, max = 12)
+                        ),
+                        column(width = 2,
+                               numericInput("duration", label = "Duration in min.:", value = 4, min = 2, max = 12),
+                        ),
+                        column(width = 2,
+                               numericInput("break_ratio", label = "Break ratio:", value = 0.5, min = 0.1, max = 2, ),
+                        ),
+                        column(width = 2,
+                               numericInput("watt_hit", label = "Intensity Watts:", value = 300, min = 100, max = 600)                           
+                        ),
+                        column(width = 2,
+                               numericInput("watt_break", label = "Break Watts:", value = 130, min = 50, max = 300)                           
+                        )
+                      )
+                    )
+                  }
+                }),
+                fluidRow(
+                  column(width = 6,
+                       textAreaInput("description", "Description", sel$description, width = "100%", height = "180px")
+                  )
+                )
               )
               
             })
@@ -323,6 +367,28 @@ server <- function(input, output, session) {
     removeModal()
     global$name <- input$name
     global$state <- input$state
+    
+    type <- gsub(pattern = "HIT_", replacement = "", input$session_type)
+    duration <<- input$duration
+    repitition <<- input$reps
+    break_size <<- input$break_size
+    watt_hit <<- input$watt_hit
+    watt_break <<- input$watt_break
+    # could also handover  reactiveValues (global)
+    ff <- create_workout(
+                   type = "eb", 
+                   duration = duration, # cant hand over input$duration directly? 
+                   repetition = repitition, #input$reps 
+                   break_size = break_size, #input$break_ratio 
+                   watt_hit = watt_hit, #input$watt_hit 
+                   watt_break = watt_break #input$watt_break
+    )
+
+    ####### NEEEED
+    #### to add rest of add_meta function here.
+    # But probably first a design discussion.
+    # About ... ellipsis usage and modules, because
+    #code gets too big
     
     
     add <- data.frame(
@@ -400,11 +466,8 @@ server <- function(input, output, session) {
     # print(identical(to_delete, input$mycalendar_delete))
     
     del_idx <- which(global$data$calendarId == sched$id)
-    print(global$data$calendarId)
-    print(del_idx)
     global$data <- global$data[-del_idx, ]
-    print(global$data)
-    
+
     cal_proxy_delete("my_calendar", to_delete)
   })
   
@@ -412,8 +475,6 @@ server <- function(input, output, session) {
   ######## START: CUSTOM SCHEDULE CLICK POPUP #############
   
   observeEvent(input$calendar_id_click, {
-    
-    print(input$calendar_id_click)
     
     removeUI(selector = "#custom_popup")
     id <- as.numeric(input$calendar_id_click$id)
@@ -454,7 +515,8 @@ server <- function(input, output, session) {
           modalButton("Cancel"),
           actionButton("schedule_delete", label = "Delete"),
           actionButton(inputId = "ok", label = "Save & Close")
-        )
+        ),
+        size = "l"
       )
     }
     
@@ -483,8 +545,6 @@ server <- function(input, output, session) {
     req(input$my_calendar_dates)
     dates <- lapply(input$my_calendar_dates, as.Date)
     global$current_dates <- seq(from = dates$start, to = dates$end, "days")
-    # print("global$current_dates")
-    # print(global$current_dates)
   })
   
   
@@ -493,7 +553,6 @@ server <- function(input, output, session) {
     req(global$current_dates)
     workout_day <- as.Date("2022-02-05")
     day_to_mark <- which(global$current_dates == workout_day) - 1
-    
     shinyjs::runjs(js_mark_dates(day_to_mark, color = "green"))
   })
   

@@ -51,6 +51,9 @@ workout_meta <- function(type = "eb", ...){
   carbs <- sum(nrgs$carbs)
   fat <- sum(nrgs$fat)
   
+  # assuming kg body fat = 7000kcal
+  kcal <- carbs*4 +  fat*7
+  
   n_secs <- sum(nrgs$seconds)
   FTP <- 270
   
@@ -60,6 +63,7 @@ workout_meta <- function(type = "eb", ...){
   NP <- (mean(caTools::runmean(watt, np_ma_amt_days)^4))^0.25
   IF = NP/FTP
   TSS <- n_secs*IF^2 / 36
+
   
   data.frame(
     TSS = round(TSS),
@@ -67,7 +71,8 @@ workout_meta <- function(type = "eb", ...){
     NP = round(NP),
     IF = round(IF, 2),
     carbs = round(carbs),
-    fat = round(fat)
+    fat = round(fat),
+    kcal = round(kcal)
   )
   
 }

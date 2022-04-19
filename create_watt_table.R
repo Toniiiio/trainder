@@ -66,15 +66,17 @@ create_workout <- function(type = "eb", ...){
 
   inputs <- as.list(substitute(list(...)))
   print(inputs)
-  
+  print(get(inputs$repetition))
+  print(get(inputs$watt_hit))
+  print("yy")
   if(type == "eb"){
-    
+    print("inputs")
     intervall <- eb_intervalls(
-      duration = inputs$duration, 
-      repetition = inputs$repetition, 
-      break_size = inputs$break_size, 
-      watt_hit = inputs$watt_hit, 
-      watt_break = inputs$watt_break
+      duration = get(inputs$duration), 
+      repetition = get(inputs$repetition), 
+      break_size = get(inputs$break_size), 
+      watt_hit = get(inputs$watt_hit), 
+      watt_break = get(inputs$watt_break)
     )
     
   }else if(type == "ib"){
