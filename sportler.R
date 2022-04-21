@@ -59,7 +59,8 @@ cyclist <- R6::R6Class(
       duration = numeric(0),
       TSS = numeric(0),
       IF = numeric(0),
-      file_name = character(0)
+      file_name = character(0),
+      altitude = numeric(0)
     ),
     workouts = list(),
     config = list(np_ma_amt_days = 30, ctl_avg_amt_days = 42, atl_avg_amt_days = 7,
@@ -94,7 +95,6 @@ cyclist$set("public", "watt_quality_check", function(){
 
 cyclist$set("public", "upload_workouts", function(){
   for(file_name in self$file_names){
-    print(file_name)
     self$add_workout(file_name)
   }
 })
@@ -134,7 +134,6 @@ cyclist$set("public", "add_workout", function(file_name){
                                }
   )
   if(is.null(self$workout_raw)) return()
-  print("rrrr")
   self$workout <- self$workout_raw
   
   workout_duplicate <- sum(as.numeric(sapply(self$workouts, function(w){
@@ -154,7 +153,8 @@ cyclist$set("public", "add_workout", function(file_name){
   
   
   # approximation n = amount secs
-  n_secs <- length(self$watt)
+  # n_secs <- length(self$watt)
+  n_secs <- nrow(self$workout$records)
   
   duration <- gsub(pattern = "d |H |M ", replacement = ":", x = lubridate::seconds_to_period(n_secs))
   duration <- gsub(pattern = "S", replacement = "", x = duration)
@@ -176,7 +176,9 @@ cyclist$set("public", "add_workout", function(file_name){
       TSS = rep(0, n_dates),
       CTL = rep(self$config$ctl_start_val, n_dates),
       ATL = rep(self$config$atl_start_val, n_dates),
-      TSB = rep(0, n_dates)
+      TSB = rep(0, n_dates),
+      altitude = rep(0, n_dates),
+      distance = rep(0, n_dates)
     )
     
     self$meta$TSS[length(self$meta$TSS)] <- NA
@@ -194,7 +196,9 @@ cyclist$set("public", "add_workout", function(file_name){
         TSS = rep(0, n_dates),
         CTL = rep(self$config$ctl_start_val, n_dates),
         ATL = rep(self$config$atl_start_val, n_dates),
-        TSB = rep(0, n_dates)
+        TSB = rep(0, n_dates),
+        altitude = rep(0, n_dates),
+        distance = rep(0, n_dates)
       )
       self$meta <- rbind(
         meta_to_add,
@@ -215,7 +219,9 @@ cyclist$set("public", "add_workout", function(file_name){
       TSS = rep(0, n_dates),
       CTL = rep(self$config$ctl_start_val, n_dates),
       ATL = rep(self$config$atl_start_val, n_dates),
-      TSB = rep(0, n_dates)
+      TSB = rep(0, n_dates),
+      altitude = rep(0, n_dates),
+      distance = rep(0, n_dates)
     )
     self$meta <- rbind(
       self$meta,
@@ -225,6 +231,9 @@ cyclist$set("public", "add_workout", function(file_name){
   
   TSS = n_secs*NP^2 / (self$FTP^2 * 3600)*100
   self$meta[self$meta$dates == workout_date, ]$TSS <- TSS
+  self$meta[self$meta$dates == workout_date, ]$altitude <- self$workout$meta$altitude
+  self$meta[self$meta$dates == workout_date, ]$distance <- self$workout$meta$distance / 1000
+  
   self$calc_meta()
   
   self$workouts <- c(self$workouts, list(self$workout_raw))
@@ -237,7 +246,9 @@ cyclist$set("public", "add_workout", function(file_name){
     TSS = TSS,
     IF = NP/self$FTP,
     NP = NP,
-    file_name = file_name
+    file_name = file_name,
+    altitude = self$workout$meta$altitude,
+    distance = self$workout$meta$distance / 1000
   )
   
   self$workout_details <- rbind(self$workout_details, workout_details_add)
@@ -262,13 +273,12 @@ cyclist$set("public", "calc_meta", function(){
 })
 
 
-source("load_strava.R")
-source("biketrainr-master/R/gen_energy_data.R")
 
+# user_name <- "shiny"
 # sportler <- list(name = user_name)
 # sportler$cyclist <- cyclist$new()
-# # #
-# # # file_path <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/"
+# # # #
+# file_name <- "C:/Users/Tonio/Downloads/Feldberg_2.fit"
 # file_name <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/2022-03-09-190632-UBERDROID7506-27-0.fit"
 # # # file_name <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/fitfiletools.fit"
 # # # all <- list.files(file_path, pattern = "*.fit")
@@ -277,13 +287,16 @@ source("biketrainr-master/R/gen_energy_data.R")
 # # # # sportler$cyclist$file_names <- "biketrainr-master/data/Morga.fit"
 # # # # path <- "biketrainr-master/data/"
 # # # file_name <- file.path(file_path, setdiff(all, exclude))
+
 # sportler$cyclist$file_names <- file_name
 # sportler$cyclist$upload_workouts()
-# # sportler$cyclist$workouts
+# sportler$cyclist$workouts
+# sportler$cyclist$workout_details
+# sportler$cyclist$file_names
 # #
 # # sapply(sportler$cyclist$workouts, identical, y = sportler$cyclist$workout_raw)
 # 
-# # sportler$cyclist$meta
+# sportler$cyclist$meta
 # sportler$cyclist$workout_details
 # 
 # 
