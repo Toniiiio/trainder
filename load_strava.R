@@ -5,8 +5,8 @@ library(FITfileR)
 library(magrittr)
 library(plyr)
 
-file_name <- "Lunch_Ride.fit"
-file_name <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/Radfahrt_am_Nachmittag.fit"
+# file_name <- "Lunch_Ride.fit"
+# file_name <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/Radfahrt_am_Nachmittag.fit"
 # file_name <- "C:/Users/User11/Downloads/" %>%
 #   {file.path(., list.files(.))} %>%
 #   file.info() %>%

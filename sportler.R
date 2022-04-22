@@ -38,6 +38,18 @@
 # 3. Check if workout was already uploaded --> workouts
 
 
+# Find id for workouts: 
+# Process: Upload workout and add it to other workouts. Also add and remove workouts.
+# --> So numerating 1:x might cause problems, because i can add workouts 1:3, remove 1+3
+# and if i want to add another workout, it would get the id 2, but there is already one
+# with id = 2.
+# Variants 1: Take random id for each workout. --> How can i identify then?
+# Variants 2: Have counter independent of elimination --> 
+# Variants 3: Dont permanently delete workout, keep info that there was one.
+# delete data security related data, but keep rest behind ui. 
+# --> Generate random id.
+
+
 library(R6)
 library(lubridate)
 source("load_strava.R")
@@ -46,7 +58,10 @@ source("biketrainr-master/R/gen_energy_data.R")
 user_name <- "Toniiiio"
 
 cyclist <- R6::R6Class(
-  classname = "Cyclist", 
+  classname = "Cyclist",
+  private = list(
+    reactiveDep = NULL
+  ),
   public = list(
     FTP = 240,
     file_names = NULL,
@@ -64,7 +79,20 @@ cyclist <- R6::R6Class(
     ),
     workouts = list(),
     config = list(np_ma_amt_days = 30, ctl_avg_amt_days = 42, atl_avg_amt_days = 7,
-                  ctl_start_val = 70, atl_start_val = 70)
+                  ctl_start_val = 70, atl_start_val = 70),
+    initialize = function() {
+      private$reactiveDep <- reactiveVal(0)
+    },
+    reactive = function() {
+      reactive({
+        private$reactiveDep()
+        self
+      })
+    },
+    changewd = function(x) {
+      private$reactiveDep(isolate(private$reactiveDep()) + 1)
+      self$workout_details <- x
+    }
   )
 )
 
@@ -90,6 +118,11 @@ cyclist$set("public", "watt_quality_check", function(){
     self$watt[missing_power] <- 0 
   }
   
+})
+
+
+cyclist$set("public", "set_file_names", function(file_names){
+  self$file_names <- file_names
 })
 
 
@@ -126,20 +159,27 @@ cyclist$set("public", "create_watt", function(hr){
 
 cyclist$set("public", "add_workout", function(file_name){
   
-  self$workout_raw <- tryCatch(parse_strava(file_name),
+  print("file_name")
+  print(file_name)
+  workout_raw <- tryCatch(parse_strava(file_name),
                                error = function(e){
                                  print(e)
                                  message(paste0("Fit contents for file with name: ", file_name, " are not correct correct."))
                                  return(NULL)
                                }
   )
-  if(is.null(self$workout_raw)) return()
-  self$workout <- self$workout_raw
-  
+
+  if(is.null(workout_raw)) return()
+
   workout_duplicate <- sum(as.numeric(sapply(self$workouts, function(w){
-    identical(w$meta, y = self$workout_raw$meta)
+    names(workout_raw$meta)
+    identical(w$meta, y = workout_raw$meta)
     # self$workout_raw$meta$distance == w$meta$distance & w$meta$date == w$meta$date
   })))
+  
+  workout_id <- uuid::UUIDgenerate(use.time = TRUE)
+  workout_raw$meta$id <- workout_id
+  self$workout <- workout_raw
   
   if(workout_duplicate){
     message("Workout was already uploaded!")
@@ -150,7 +190,6 @@ cyclist$set("public", "add_workout", function(file_name){
   no_watts <- is.null(self$watt)
   if(no_watts) self$create_watt(self$workout$records$heart_rate)
   self$watt_quality_check()
-  
   
   # approximation n = amount secs
   # n_secs <- length(self$watt)
@@ -172,6 +211,7 @@ cyclist$set("public", "add_workout", function(file_name){
 
     n_dates <- length(dates)
     self$meta <- data.frame(
+      id = workout_id,
       dates = dates,
       TSS = rep(0, n_dates),
       CTL = rep(self$config$ctl_start_val, n_dates),
@@ -192,6 +232,7 @@ cyclist$set("public", "add_workout", function(file_name){
       dates <- seq.Date((workout_date - 1), min(self$meta$dates), "days")
       n_dates <- length(dates)
       meta_to_add <- data.frame(
+        id = workout_id,
         dates = dates,
         TSS = rep(0, n_dates),
         CTL = rep(self$config$ctl_start_val, n_dates),
@@ -215,6 +256,7 @@ cyclist$set("public", "add_workout", function(file_name){
     dates <- seq.Date((workout_date - 1), min(self$meta$dates), "days")
     n_dates <- length(dates)
     meta_to_add <- data.frame(
+      id = workout_id,
       dates = dates,
       TSS = rep(0, n_dates),
       CTL = rep(self$config$ctl_start_val, n_dates),
@@ -236,10 +278,10 @@ cyclist$set("public", "add_workout", function(file_name){
   
   self$calc_meta()
   
-  self$workouts <- c(self$workouts, list(self$workout_raw))
+  self$workouts <- c(self$workouts, list(self$workout))
   
   workout_details_add <- data.frame(
-    id = paste0(user_name, "_", nrow(self$workout_details) + 1),
+    id = workout_id,
     date = workout_date,
     duration = duration,
     n_secs = n_secs,
@@ -250,11 +292,43 @@ cyclist$set("public", "add_workout", function(file_name){
     altitude = self$workout$meta$altitude,
     distance = self$workout$meta$distance / 1000
   )
-  
+
   self$workout_details <- rbind(self$workout_details, workout_details_add)
   
+  # trigger reactive reaction
+  private$reactiveDep(isolate(private$reactiveDep()) + 1)
 })
 
+cyclist$set("public", "del_wd_entries", function(id){
+
+  print("self$workout_details$id")
+  print(self$workout_details$id)
+  print("id")
+  print(id)
+  to_delete_details <- which(self$workout_details$id == id)
+  print("to_delete_details")
+  print(to_delete_details)
+  
+  if(length(to_delete_details)) self$workout_details <- self$workout_details[-to_delete_details, ]
+
+  n <- length(self$workouts)  
+  ids <- rep("", n)
+  for(nr in 1:n){
+    ids[nr] <- self$workouts[[nr]]$meta$id
+  }
+  print("ids")
+  print(ids)
+  
+  to_delete <- which(ids == id)
+  print("to_delete")
+  print(to_delete)
+  
+  if(length(to_delete)) self$workouts <- self$workouts[-to_delete]
+  
+  # trigger reactive reaction
+  private$reactiveDep(isolate(private$reactiveDep()) + 1)
+
+})
 
 cyclist$set("public", "calc_meta", function(){
   
@@ -277,7 +351,7 @@ cyclist$set("public", "calc_meta", function(){
 # user_name <- "shiny"
 # sportler <- list(name = user_name)
 # sportler$cyclist <- cyclist$new()
-# # # #
+# # # # #
 # file_name <- "C:/Users/Tonio/Downloads/Feldberg_2.fit"
 # file_name <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/2022-03-09-190632-UBERDROID7506-27-0.fit"
 # # # file_name <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/fitfiletools.fit"
@@ -288,10 +362,10 @@ cyclist$set("public", "calc_meta", function(){
 # # # # path <- "biketrainr-master/data/"
 # # # file_name <- file.path(file_path, setdiff(all, exclude))
 
-# sportler$cyclist$file_names <- file_name
-# sportler$cyclist$upload_workouts()
-# sportler$cyclist$workouts
-# sportler$cyclist$workout_details
+  # sportler$cyclist$file_names <- file_name
+  # sportler$cyclist$upload_workouts()
+  # sportler$cyclist$workouts
+  # sportler$cyclist$workout_details
 # sportler$cyclist$file_names
 # #
 # # sapply(sportler$cyclist$workouts, identical, y = sportler$cyclist$workout_raw)

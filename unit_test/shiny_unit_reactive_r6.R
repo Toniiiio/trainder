@@ -17,8 +17,8 @@ Person <- R6::R6Class(
       })
     },
     changewd = function(x) {
-      private$reactiveDep(isolate(private$reactiveDep()) + 1)
       self$workout_details <- x
+      private$reactiveDep(isolate(private$reactiveDep()) + 1)
     }
   )
 )

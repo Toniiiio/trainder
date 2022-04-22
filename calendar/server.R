@@ -24,6 +24,15 @@ data <- data.frame(
   date_diff = character()
 )
 
+shinyInput <- function(FUN, len, ids, ...) {
+  inputs <- character(len)
+  for (nr in seq_len(len)) {
+    inputs[nr] <- as.character(FUN(ids[nr], ...))
+  }
+  inputs
+}
+
+
 options(scipen = 999)
 
 server <- function(input, output, session) {
@@ -70,16 +79,6 @@ server <- function(input, output, session) {
   
   ################ TABSET PANEL: WORKOUT TABLE
   
-  
-  shinyInput <- function(FUN, len, id, ...) {
-    inputs <- character(len)
-    for (i in seq_len(len)) {
-      inputs[i] <- as.character(FUN(paste0(id, i), ...))
-    }
-    inputs
-  }
-  
-  
   df <- reactiveValues(data = data.frame(
     
     Name = c('Dilbert', 'Alice', 'Wally', 'Ashok', 'Dogbert'),
@@ -90,51 +89,47 @@ server <- function(input, output, session) {
   ))
   
   output$workout_details <- renderDataTable({
-    global$sportler$cyclist$workout_details
-    print("NOWWWW")
+    print("renderDataTable")
     
-    createLink <- function(val, type) {
-      sprintf('<a href="https://www.google.com/q=%s" target="_blank" class="btn btn-primary">%s</a>',val, type)
-    }
+    df <- data.frame(cyclist1()$workout_details)
+    
+    req(df)
+    req(nrow(df) > 0)
 
-    df <- data.frame(global$sportler$cyclist$workout_details)
+    print("df")    
     print(df)
-    print("df")
+
     df$Sport <- "Radfahrt"
     df$TSS <- round(df$TSS)
     df$IF <- round(df$IF, 2)
     df$NP <- round(df$NP)
     df$weekday <- weekdays(df$date)
-    df$delete <- shinyInput(actionButton, nrow(df), 'button_', label = "Delete", onclick = 'Shiny.onInputChange(\"delete_workout\",  this.id)')
-    df$edit <- createLink(df$id, "Edit")
-    df$link <- createLink(df$id, "View")
+    df$delete <- shinyInput(actionButton, nrow(df), paste0('del_', df$id), label = "Delete", onclick = 'Shiny.onInputChange(\"delete_workout\",  {id: this.id, random: Math.random()})')
+    df$edit <- shinyInput(actionButton, nrow(df), 'button_', label = "Edit", onclick = 'Shiny.onInputChange(\"edit_workout\",  this.id)')
+    df$link <- shinyInput(actionButton, nrow(df), 'button_', label = "View", onclick = 'Shiny.onInputChange(\"view_workout\",  this.id)')
     df$km <- round(df$distance, 2)
     df$altitude <- round(df$altitude)
     df$title <- "Bike ride"
-    df[, c("title", "weekday", "date", "duration", "km", "altitude", "TSS", "IF", "NP", "delete", "edit", "link")]
-    
-    # df$data
+    df[, c("id", "title", "weekday", "date", "duration", "km", "altitude", "TSS", "IF", "NP", "delete", "edit", "link")]
   }, options = list(
     pageLength = 10
   ), escape = FALSE)
   
   
   observeEvent(input$delete_workout, {
-    id_raw <- input$delete_workout
-    id <- gsub(pattern = "button_", replacement = "", id_raw) %>% as.numeric
+    id_raw <- input$delete_workout$id
+    print("id_raw")
+    print(id_raw)
+    id <- gsub(pattern = "del_", replacement = "", id_raw)
+    print("idd")
     print(id)
-    global$sportler$cyclist$workout_details <- global$sportler$cyclist$workout_details[-id, ]
-    print(global$sportler$cyclist$workout_details)
-  })
-  
-  output$auth_output <- renderPrint({
-    reactiveValuesToList(res_auth)
+    cyclist1()$del_wd_entries(id)
+    #cal_proxy_delete("my_calendar", input$my_calendar_delete)
+    # print(cyclist1()$workout_details)
   })
   
   observeEvent(res_auth$user, {
     
-    print("res_auth$user")
-    print(res_auth$user)
     req(res_auth$user)
     global$user_name <- res_auth$user
     global$is_admin <- res_auth$admin
@@ -153,28 +148,29 @@ server <- function(input, output, session) {
     }else{
       
       global$sportler <- list(name = global$user_name)
-      global$sportler$cyclist <- cyclist$new()
+      # cyclist1() <- cyclist1$new()
       saveRDS(object = global$sportler, file = paste0("user_data/", global$user_name, ".RData"))
       
     }
     
   })
+    
+  cyclist1 <- cyclist$new()$reactive()
   
   observeEvent(input$file1, {
     if(!is.null(input$file1)){
-      
-      global$sportler$cyclist$file_names <- input$file1$datapath
+      cyclist1()$set_file_names(input$file1$datapath)
       # path <- "biketrainr-master/data/"
-      # sportler$cyclist$file_names <- file.path(path, list.files(path))
-      global$sportler$cyclist$upload_workouts()
+      # sportler$cyclist1$file_names <- file.path(path, list.files(path))
+      cyclist1()$upload_workouts()
       print("upload_Workouts works")
-      print(global$sportler$cyclist$workout_details)
+      print(cyclist1()$workout_details)
       file_name <- paste0("user_data/", global$user_name, ".RData")
       saveRDS(object = global$sportler, file = file_name)
       
       # file_name <- "user_data/shiny.RData"
       # xx <- readRDS(file = file_name)
-      # print(xx$cyclist$workout_details)
+      # print(xx$cyclist1$workout_details)
     }
      
   })
@@ -494,7 +490,7 @@ server <- function(input, output, session) {
     removeModal()
   
     sched <- input$calendar_id_click$schedule
-    
+    print(sched)
     to_delete <- list(id = sched$id, title = sched$title, 
                       location = sched$location, start = sched$start$`_date`, end = sched$end$`_date`, 
                       isAllDay = sched$isAllDay, category = sched$category, calendarId = sched$calendarId)
