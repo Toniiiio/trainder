@@ -1,3 +1,4 @@
+source("calendar/dygraph_modules.R")
 ui <- fluidPage(
   tags$style(
     type = 'text/css',
@@ -7,7 +8,7 @@ ui <- fluidPage(
   useShinyjs(),
   useWaitress(),
   
-  tabsetPanel(
+  tabsetPanel(id = "panel_tab",
     tabPanel("calendar", 
              fluidRow(
                column(width = 1,
@@ -33,8 +34,11 @@ ui <- fluidPage(
                uiOutput("calendar_sidebar")
              )
     ),
-    tabPanel("Workout",
-             DT::dataTableOutput("workout_details", width = "50%")
+    tabPanel("All Workouts",
+             uiOutput("workout_details")
+    ),
+    tabPanel("Workout View",
+             modUI("try", "try")
     )
   )
   

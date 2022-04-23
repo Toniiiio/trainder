@@ -37,6 +37,19 @@ options(scipen = 999)
 
 server <- function(input, output, session) {
   
+  global2 <- reactiveValues(records = NULL)
+  
+  observe({
+    file_name <- "biketrainr-master/data/02_04_2022_LIT.fit"
+    source("load_strava.R")  
+    global2$records <- load_strava(file_name = file_name)
+  })
+  
+  #records <- mtcars#createRecords(id = "try2")
+  observeEvent(global2$records, {
+    mod <- modServer(id = "try", records = global2$records)    
+  })
+  
   global <- reactiveValues(data = data, calendar_updated = TRUE, current_date = Sys.Date(), sportler = NULL)
   
   res_auth <- secure_server(
@@ -88,7 +101,25 @@ server <- function(input, output, session) {
     row.names = 1:5
   ))
   
-  output$workout_details <- renderDataTable({
+  output$workout_details <- renderUI({
+    
+    df <- data.frame(cyclist1()$workout_details)
+    if(nrow(df)){
+      out <- DT::dataTableOutput("workout_details_table", width = "50%")
+    }else{
+      out <- h5(
+        tags$a("Upload", href ="javascript:Shiny.setInputValue('switch_panel', Math.random());"), 
+        " a workout to use this view!"
+      )
+    }
+    return(out)
+  })
+  
+  observeEvent(input$switch_panel, {
+    updateTabsetPanel(session = session, inputId = "panel_tab", selected = "calendar")
+  })
+  
+  output$workout_details_table <- renderDataTable({
     print("renderDataTable")
     
     df <- data.frame(cyclist1()$workout_details)
