@@ -38,7 +38,7 @@ ui <- fluidPage(
              uiOutput("workout_details")
     ),
     tabPanel("Workout View",
-             modUI("try", "try")
+             uiOutput("mod_workout_view")
     )
   )
   

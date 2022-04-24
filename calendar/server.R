@@ -37,17 +37,24 @@ options(scipen = 999)
 
 server <- function(input, output, session) {
   
-  global2 <- reactiveValues(records = NULL)
+  # global2 <- reactiveValues(records = NULL)
   
-  observe({
-    file_name <- "biketrainr-master/data/02_04_2022_LIT.fit"
-    source("load_strava.R")  
-    global2$records <- load_strava(file_name = file_name)
-  })
+  # observe({
+  #   file_name <- "biketrainr-master/data/02_04_2022_LIT.fit"
+  #   source("load_strava.R")
+  #   rec <- parse_strava(file_name = file_name)
+  #   global2$records <- rec$records
+  # })
   
-  #records <- mtcars#createRecords(id = "try2")
-  observeEvent(global2$records, {
-    mod <- modServer(id = "try", records = global2$records)    
+  # observeEvent(cyclist1()$workouts, {
+  #   req(length(cyclist1()$workout) > 0)
+  #   global$records <- cyclist1()$workouts[[1]]$records
+  # })
+  
+  observeEvent(cyclist1()$workouts, {
+    req(length(cyclist1()$workouts) > 0)
+    print("go?")
+    mod <- modServer(id = "try", workouts = cyclist1()$workouts)
   })
   
   global <- reactiveValues(data = data, calendar_updated = TRUE, current_date = Sys.Date(), sportler = NULL)
@@ -82,7 +89,6 @@ server <- function(input, output, session) {
     template_start_date <- input$template_start_date
     data$start <- template_start_date + data$date_diff
     data$end <- template_start_date + data$date_diff
-    print("go")
     for(nr in seq(nrow(data))){
       cal_proxy_add("my_calendar", list(start = data[nr, ]$start, end = data[nr, ]$end, 
                                         isAllDay = FALSE, category = "time", title = data[nr, ]$title))
@@ -113,6 +119,24 @@ server <- function(input, output, session) {
       )
     }
     return(out)
+  })
+  
+  observeEvent(c(cyclist1()$workouts), {
+    workouts <- cyclist1()$workouts
+    if(length(workouts)){ 
+      out <- modUI("try", "try")
+      mod <- modServer(id = "try", workouts = workouts)          
+    }else{
+      out <- h5(
+        tags$a("Upload", href ="javascript:Shiny.setInputValue('switch_panel', Math.random());"), 
+        " a workout to use this view!"
+      )
+    }
+    
+    output$mod_workout_view <- renderUI({
+      out
+    })
+    
   })
   
   observeEvent(input$switch_panel, {

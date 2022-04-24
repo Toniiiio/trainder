@@ -56,9 +56,9 @@ load_strava <- function(file_name){
   # strava_data
 }
 
-# file_name <- "Radfahrt_am_Morgen.fit"
+# file_name <- "biketrainr-master/data/Afternoon_Ride.fit"
 # records <- load_strava(file_name)
-
+# head(records)
 
 # file_name <- "C:/Users/Tonio/Downloads/Afternoon_Ride.fit"
 # parsed <- parse_strava(file_name)

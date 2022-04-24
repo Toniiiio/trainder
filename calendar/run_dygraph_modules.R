@@ -6,27 +6,12 @@ library(shinyjs)
 library(xts)
 library(leaflet)
 
-hr_max <- 190
-hr_lit <- c(124, 146, 162)
 
 # source("R/gen_data.R")
 # source("R/gen_energy_data.R")
 
 
 source("calendar/dygraph_modules.R")
-
-createRecords <- function(id, records) {
-  moduleServer(
-    id,
-    ## Below is the module function 
-    function(input, output, session, records) {
-      file_name <- "biketrainr-master/data/02_04_2022_LIT.fit"
-      source("load_strava.R")  
-      records <- load_strava(file_name = file_name)
-      return(records)
-    }
-  )
-}
 
 ui <- shinyUI(fluidPage(
   useShinyjs(),
@@ -52,7 +37,8 @@ server <- function(input, output, session) {
     
     if(!is.null(global2$records)){
       out <- modUI("try", "try")
-      mod <- modServer(id = "try", records = global2$records)          
+      workout <- list(records = global2$records, meta = NULL)
+      mod <- modServer(id = "try", workouts = list(workout, workout))
     }else{
       out <- h5(
         tags$a("Upload", href ="javascript:Shiny.setInputValue('switch_panel', Math.random());"), 
