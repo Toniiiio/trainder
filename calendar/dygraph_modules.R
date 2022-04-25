@@ -18,11 +18,18 @@ create_dygraph_data <- function(records){
 # Then render the selecter which workout should be shown. Default will be the first one.
 # Then call the rest.
 
-modServer <- function(id, workouts) {
+modServer <- function(id, workouts, global) {
   moduleServer(
     id,
     ## Below is the module function
     function(input, output, session) {
+      # print("inside module")
+      # print("selected_workout")
+      # print(selected_workout)
+      # 
+      # observe({
+      #   global$selected_workout <- selected_workout  
+      # })
       
       hr_max <- 190
       hr_lit <- c(124, 146, 162)
@@ -30,29 +37,15 @@ modServer <- function(id, workouts) {
       ns <- NS(id)
       
       output$select_workout_for_leaflet <- renderUI({
-        selectInput(ns("select_workout"), "Select Workout:", 1:length(workouts))
+        selectInput(ns("select_workout"), "Select Workout:", 1:length(workouts), selected = global$selected_workout)
       })
-      
-      observeEvent(input$select_workout, {
-        global$workout_nr <- as.numeric(input$select_workout)
-      })
-      
-      global <- reactiveValues(track = NULL, workout_nr = 1, track_raw = NULL, keep_time = NULL, heart_range = NULL,
-                               map_updated_at = Sys.time() + 3,
-                               dy_updated_at = Sys.time() + 3, sub_seq = NULL, just_map_updated = FALSE,
-                               seq_updated_at = Sys.time() + 3)
       
       #input$select_workout, 
-      observeEvent(global$workout_nr, { 
-        print("workouts")
-        print(length(workouts))
-        print("global$workout_nr")
-        print(global$workout_nr)
-        req(global$workout_nr <= length(workouts))
-        records <- workouts[[global$workout_nr]]$records
-        print("head(records)")
-        print(head(records))
-        
+      observeEvent(input$select_workout, { 
+        sel <- as.numeric(input$select_workout)
+        req(sel <= length(workouts))
+        records <- workouts[[sel]]$records
+
         out <- create_dygraph_data(records)
         qxts <- out$qxts
         track_raw <- out$track_raw
@@ -209,7 +202,7 @@ modServer <- function(id, workouts) {
       })
       
       output$create_seq <- renderUI({
-        
+        req(global$keep_time)
         ww <- global$keep_time %>% which
         end_first_seq <- which(diff(ww) != 1)
         
@@ -257,7 +250,6 @@ modServer <- function(id, workouts) {
           # print(bounds)
           global$keep_time <- global$track_raw$lat < bounds$north & global$track_raw$lat > bounds$south &
             global$track_raw$lon < bounds$east & global$track_raw$lon > bounds$west
-          print(global$keep_time %>% sum)
         })
       })
       
@@ -288,6 +280,7 @@ modServer <- function(id, workouts) {
       
       output$dygraph <- renderDygraph({
         
+        req(global$dy_track)
         global$trigger_dygraph_update
         # print("keep time")
         isolate({
@@ -296,7 +289,6 @@ modServer <- function(id, workouts) {
           track$speed %<>% as.numeric
           # df <- data.frame(x = track$time, y = track$speed) # toberemoved
           
-          print(head(global$qxts))
           graph <- dygraph(global$qxts, main = "Bike ride")
           
 
@@ -314,8 +306,6 @@ modServer <- function(id, workouts) {
               dyRangeSelector()
           }
           
-          print("global$qxts$enhanced_altitude")
-          print(head(global$qxts$enhanced_altitude))
           if(!is.null(global$qxts$enhanced_altitude)){
             print("xx")
             graph %<>%

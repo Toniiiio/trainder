@@ -37,27 +37,45 @@ options(scipen = 999)
 
 server <- function(input, output, session) {
   
-  # global2 <- reactiveValues(records = NULL)
-  
-  # observe({
-  #   file_name <- "biketrainr-master/data/02_04_2022_LIT.fit"
-  #   source("load_strava.R")
-  #   rec <- parse_strava(file_name = file_name)
-  #   global2$records <- rec$records
-  # })
-  
-  # observeEvent(cyclist1()$workouts, {
-  #   req(length(cyclist1()$workout) > 0)
-  #   global$records <- cyclist1()$workouts[[1]]$records
-  # })
-  
   observeEvent(cyclist1()$workouts, {
-    req(length(cyclist1()$workouts) > 0)
-    print("go?")
-    mod <- modServer(id = "try", workouts = cyclist1()$workouts)
+    workouts <- cyclist1()$workouts
+    req(length(workouts) > 0)
+    
+    n <- length(workouts)
+    workout_ids <- rep(NA, n)
+    for(nr in 1:n){
+      global$workout_ids[nr] <- workouts[[nr]]$meta$id
+    }
   })
   
-  global <- reactiveValues(data = data, calendar_updated = TRUE, current_date = Sys.Date(), sportler = NULL)
+  observeEvent(input$view_workout, {
+    req(global$workout_ids)
+    id_raw <- input$view_workout$id
+    id <- gsub(pattern = "view_", replacement = "", id_raw)
+    match_idx <- which(global$workout_ids == id)
+    # need a random value, because global value can be changed without input,
+    # so input might not change, but should
+    global$selected_workout <- c(match_idx, rnorm(1))
+    updateTabsetPanel(session = session, inputId = "panel_tab", selected = "Workout View")
+    print("match_idx")
+    print(match_idx)
+  })
+  
+  
+  observeEvent(c(global$selected_workout, cyclist1()$workouts), {
+    req(length(cyclist1()$workouts) > 0)
+    print("go?")
+    print("global$selected_workout")
+    print(global$selected_workout)
+    global_mod <- reactiveValues(track = NULL, track_raw = NULL, keep_time = NULL, heart_range = NULL,
+                             map_updated_at = Sys.time() + 3, selected_workout = global$selected_workout[1],
+                             dy_updated_at = Sys.time() + 3, sub_seq = NULL, just_map_updated = FALSE,
+                             seq_updated_at = Sys.time() + 3)
+    mod <- modServer(id = "try", workouts = cyclist1()$workouts, global = global_mod)
+  })
+  
+  global <- reactiveValues(data = data, calendar_updated = TRUE, current_date = Sys.Date(), sportler = NULL,
+                           selected_workout = 1)
   
   res_auth <- secure_server(
     check_credentials = check_credentials(credentials)
@@ -121,11 +139,17 @@ server <- function(input, output, session) {
     return(out)
   })
   
-  observeEvent(c(cyclist1()$workouts), {
+  observeEvent(c(cyclist1()$workouts, global$selected_workout), {
     workouts <- cyclist1()$workouts
     if(length(workouts)){ 
       out <- modUI("try", "try")
-      mod <- modServer(id = "try", workouts = workouts)          
+      print("global$selected_workout")
+      print(global$selected_workout)
+      global_mod <- reactiveValues(track = NULL, track_raw = NULL, keep_time = NULL, heart_range = NULL,
+                                   map_updated_at = Sys.time() + 3, selected_workout = global$selected_workout[1],
+                                   dy_updated_at = Sys.time() + 3, sub_seq = NULL, just_map_updated = FALSE,
+                                   seq_updated_at = Sys.time() + 3)
+      mod <- modServer(id = "try", workouts = cyclist1()$workouts, global = global_mod)
     }else{
       out <- h5(
         tags$a("Upload", href ="javascript:Shiny.setInputValue('switch_panel', Math.random());"), 
@@ -151,17 +175,14 @@ server <- function(input, output, session) {
     req(df)
     req(nrow(df) > 0)
 
-    print("df")    
-    print(df)
-
     df$Sport <- "Radfahrt"
     df$TSS <- round(df$TSS)
     df$IF <- round(df$IF, 2)
     df$NP <- round(df$NP)
     df$weekday <- weekdays(df$date)
     df$delete <- shinyInput(actionButton, nrow(df), paste0('del_', df$id), label = "Delete", onclick = 'Shiny.onInputChange(\"delete_workout\",  {id: this.id, random: Math.random()})')
-    df$edit <- shinyInput(actionButton, nrow(df), 'button_', label = "Edit", onclick = 'Shiny.onInputChange(\"edit_workout\",  this.id)')
-    df$link <- shinyInput(actionButton, nrow(df), 'button_', label = "View", onclick = 'Shiny.onInputChange(\"view_workout\",  this.id)')
+    df$edit <- shinyInput(actionButton, nrow(df), paste0('edit_', df$id), label = "Edit", onclick = 'Shiny.onInputChange(\"edit_workout\",  {id: this.id, random: Math.random()})')
+    df$link <- shinyInput(actionButton, nrow(df), paste0('view_', df$id), label = "View", onclick = 'Shiny.onInputChange(\"view_workout\",  {id: this.id, random: Math.random()})')
     df$km <- round(df$distance, 2)
     df$altitude <- round(df$altitude)
     df$title <- "Bike ride"
@@ -173,11 +194,7 @@ server <- function(input, output, session) {
   
   observeEvent(input$delete_workout, {
     id_raw <- input$delete_workout$id
-    print("id_raw")
-    print(id_raw)
     id <- gsub(pattern = "del_", replacement = "", id_raw)
-    print("idd")
-    print(id)
     cyclist1()$del_wd_entries(id)
     #cal_proxy_delete("my_calendar", input$my_calendar_delete)
     # print(cyclist1()$workout_details)
