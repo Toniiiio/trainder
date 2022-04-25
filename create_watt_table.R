@@ -62,21 +62,21 @@ ie_intervalls <- function(sec = 30, rep_intensity = 13, rep_sets = 3, break_set_
 ie_intervalls()
 
 
-create_workout <- function(type = "eb", ...){
-
-  inputs <- as.list(substitute(list(...)))
-  print(inputs)
-  print(get(inputs$repetition))
-  print(get(inputs$watt_hit))
+create_workout <- function(type = "eb", intervall_data){
+  # print("dsss")
+  # inputs <- as.list(substitute(list(...)))
+  # print(inputs)
+  # print(get(inputs$repetition))
+  # print(get(inputs$watt_hit))
   print("yy")
   if(type == "eb"){
     print("inputs")
     intervall <- eb_intervalls(
-      duration = get(inputs$duration), 
-      repetition = get(inputs$repetition), 
-      break_size = get(inputs$break_size), 
-      watt_hit = get(inputs$watt_hit), 
-      watt_break = get(inputs$watt_break)
+      duration = intervall_data$duration, 
+      repetition = intervall_data$repetition, 
+      break_size = intervall_data$break_size, 
+      watt_hit = intervall_data$watt_hit, 
+      watt_break = intervall_data$watt_break
     )
     
   }else if(type == "ib"){

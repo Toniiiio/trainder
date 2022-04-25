@@ -473,20 +473,16 @@ server <- function(input, output, session) {
     global$state <- input$state
     
     type <- gsub(pattern = "HIT_", replacement = "", input$session_type)
-    duration <<- input$duration
-    repitition <<- input$reps
-    break_size <<- input$break_size
-    watt_hit <<- input$watt_hit
-    watt_break <<- input$watt_break
-    # could also handover  reactiveValues (global)
-    ff <- create_workout(
-                   type = "eb", 
-                   duration = duration, # cant hand over input$duration directly? 
-                   repetition = repitition, #input$reps 
-                   break_size = break_size, #input$break_ratio 
-                   watt_hit = watt_hit, #input$watt_hit 
-                   watt_break = watt_break #input$watt_break
+    intervall_data <- list(
+      duration = as.numeric(input$duration),
+      repetition = as.numeric(input$reps),
+      break_size = as.numeric(input$break_size),
+      watt_hit = as.numeric(input$watt_hit),
+      watt_break = as.numeric(input$watt_break)
     )
+
+    # could also handover  reactiveValues (global)
+    ff <- create_workout(type = "eb", intervall_data)
 
     ####### NEEEED
     #### to add rest of add_meta function here.
