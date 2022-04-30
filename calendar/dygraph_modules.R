@@ -2,7 +2,7 @@ create_dygraph_data <- function(records){
   track_raw <- records
   track_raw$lat <- track_raw$position_lat
   track_raw$lon <- track_raw$position_long
-  track_raw$heart_rate %<>% as.numeric()
+  if(!is.null(track_raw$heart_rate)) track_raw$heart_rate %<>% as.numeric()
   track <- track_raw
   track$distance %<>% round
   if(is.null(track$enhanced_altitude)) track$enhanced_altitude <- track$altitude
@@ -292,7 +292,7 @@ modServer <- function(id, workouts, global) {
           graph <- dygraph(global$qxts, main = "Bike ride")
           
 
-          range <- c(0, max(c(qxts$heart_rate, qxts$power)))
+          range <- c(0, max(c(global$qxts$heart_rate, global$qxts$power)))
           if(!is.null(global$qxts$heart_rate)){
             graph %<>%
               dyAxis("y", label = "Heart rate", valueRange = range, 

@@ -8,15 +8,10 @@ ma <- function(x, n = 5){
 }
 
 
-used_energy <- function(records){
-  avg_power <- records$power %>% mean
+used_energy <- function(watt, nrg){
+  avg_power <- watt %>% mean
 
-  time <- records$timestamp %>%
-    range %>%
-    {difftime(time1 = .[2], time2 = .[1], units = "hours")} %>%
-    as.numeric
-  time <- nrow(records)/3600
-  time
+  time <- length(watt)/3600
   nrg[1, ]$carbs <- 0
 
   nrg$hr <- NULL
@@ -24,13 +19,10 @@ used_energy <- function(records){
   carbs <- nrg[idx, ]$carbs
   fat <- nrg[idx, ]$fat
 
-  records$watt <- records$power
+  ma_watt <- data.frame(watt = round(ma(watt)))
 
-  records_ma <- records
-  records_ma$watt <- round(ma(records$power))
-
-  comb <- join(records, nrg, by = "watt")
-  comb_ma <- join(records_ma, nrg, by = "watt")
+  comb <- join(data.frame(watt = watt), nrg, by = "watt")
+  comb_ma <- join(ma_watt, nrg, by = "watt")
 
   carbs_from_avg <- time*carbs
   carbs_from_avg
@@ -75,8 +67,10 @@ used_energy <- function(records){
   )
 }
 
-file_name <- "data/03_04_2022.fit"
-#"data/",
-records <- load_strava(paste0(file_name))
-energy <- used_energy(records)
-energy
+
+
+# source("load_strava.R")
+# file_name <- "biketrainr-master/data/Erstes_wieder_antesten.fit"
+# records <- load_strava(paste0(file_name))
+# energy <- used_energy(records, nrg)
+# energy

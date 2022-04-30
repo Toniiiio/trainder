@@ -35,7 +35,23 @@ shinyInput <- function(FUN, len, ids, ...) {
 
 options(scipen = 999)
 
+
+# source("load_strava.R")
+# file_name <- "biketrainr-master/data/Erstes_wieder_antesten.fit"
+# records <- load_strava(paste0(file_name))
+# energy
+
+
 server <- function(input, output, session) {
+  
+  printLogJs <- function(x, ...) {
+    
+    logjs(x)
+    
+    T
+  }
+  
+  addHandler(printLogJs)
   
   observeEvent(cyclist1()$workouts, {
     workouts <- cyclist1()$workouts
@@ -116,15 +132,6 @@ server <- function(input, output, session) {
   
   ################ TABSET PANEL: WORKOUT TABLE
   
-  df <- reactiveValues(data = data.frame(
-    
-    Name = c('Dilbert', 'Alice', 'Wally', 'Ashok', 'Dogbert'),
-    Motivation = c(62, 73, 3, 99, 52),
-    Actions = shinyInput(actionButton, 5, 'button_', label = "Fire", onclick = 'Shiny.onInputChange(\"select_button\",  this.id)' ),
-    stringsAsFactors = FALSE,
-    row.names = 1:5
-  ))
-  
   output$workout_details <- renderUI({
     
     df <- data.frame(cyclist1()$workout_details)
@@ -186,7 +193,12 @@ server <- function(input, output, session) {
     df$km <- round(df$distance, 2)
     df$altitude <- round(df$altitude)
     df$title <- "Bike ride"
-    df[, c("id", "title", "weekday", "date", "duration", "km", "altitude", "TSS", "IF", "NP", "delete", "edit", "link")]
+    add_energy <- NULL
+    if(!is.null(df$kcal)){
+      add_energy <- c("kcal", "carbs", "fat")
+      df$kcal <- round(df$kcal)
+    } 
+    df[, c("title", "weekday", "date", "duration", "km", "altitude", "TSS", "IF", "NP", add_energy, "delete", "edit", "link")]
   }, options = list(
     pageLength = 10
   ), escape = FALSE)
@@ -197,7 +209,6 @@ server <- function(input, output, session) {
     id <- gsub(pattern = "del_", replacement = "", id_raw)
     cyclist1()$del_wd_entries(id)
     #cal_proxy_delete("my_calendar", input$my_calendar_delete)
-    # print(cyclist1()$workout_details)
   })
   
   observeEvent(res_auth$user, {
@@ -412,6 +423,32 @@ server <- function(input, output, session) {
                         ),
                         column(width = 2,
                                numericInput("duration", label = "Duration in min.:", value = 4, min = 2, max = 12),
+                        ),
+                        column(width = 2,
+                               numericInput("break_ratio", label = "Break ratio:", value = 0.5, min = 0.1, max = 2, ),
+                        ),
+                        column(width = 2,
+                               numericInput("watt_hit", label = "Intensity Watts:", value = 300, min = 100, max = 600)                           
+                        ),
+                        column(width = 2,
+                               numericInput("watt_break", label = "Break Watts:", value = 130, min = 50, max = 300)                           
+                        )
+                      )
+                    )
+                  }
+                  
+                  if(input$session_type == "HIT_IB"){
+                    intervall_details <- tagList(
+                      fluidRow(h4("Intervall details:")),
+                      fluidRow(
+                        column(width = 2,
+                               numericInput("rep_sets", label = "Rep Sets:", value = 3, min = 1, max = 5)
+                        ),
+                        column(width = 2,
+                               numericInput("rep_intensity", label = "Rep of intensity:", value = 13, min = 4, max = 20)
+                        ),
+                        column(width = 2,
+                               numericInput("secs", label = "Duration of intensity.:", value = 30, min = 20, max = 60),
                         ),
                         column(width = 2,
                                numericInput("break_ratio", label = "Break ratio:", value = 0.5, min = 0.1, max = 2, ),

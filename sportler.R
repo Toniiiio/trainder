@@ -10,7 +10,8 @@
 # Or take predefined time interval, e.g. 1.1.2000 - today. That would 
 # be 8000+ values. Most of them empty. 
 # However, everytime a new workout is uploaded it could be an older workout
-# as well, where CTL, ATL etc. would have to be recalculated anyway.
+# as well, where CTL, ATL etc. would have to be recalculated 
+.
 # Therefore, recalculation is a required feature anyway. 
 # So if a new workout is added, expand the TSS values and recalculate the rest.
 # Time horizon is one day before oldest workout until one day ahead new workout / 
@@ -63,6 +64,7 @@ cyclist <- R6::R6Class(
     reactiveDep = NULL
   ),
   public = list(
+    energy = NULL,
     FTP = 240,
     file_names = NULL,
     workout = NULL,
@@ -76,12 +78,14 @@ cyclist <- R6::R6Class(
       IF = numeric(0),
       file_name = character(0),
       altitude = numeric(0)
-    ),
+    ), 
+    nrg = NULL,
     workouts = list(),
     config = list(np_ma_amt_days = 30, ctl_avg_amt_days = 42, atl_avg_amt_days = 7,
                   ctl_start_val = 70, atl_start_val = 70),
     initialize = function() {
       private$reactiveDep <- reactiveVal(0)
+      self$nrg <- create_nrg()
     },
     reactive = function() {
       reactive({
@@ -98,6 +102,7 @@ cyclist <- R6::R6Class(
 
 
 cyclist$set("public", "calc_NP", function(watts){
+  print("starting calc_NP")
   (mean(caTools::runmean(watts, self$config$np_ma_amt_days)^4))^0.25 
 })
 
@@ -108,14 +113,14 @@ cyclist$set("public", "calc_tss", function(NP = 184, sec, workout_date){
   self$meta[self$meta$dates == workout_date, ]$TSS = sec*NP^2 / (self$FTP^2 * 3600)*100
 })
 
-cyclist$set("public", "watt_quality_check", function(){
-  missing_power <- self$watt == 65535
+cyclist$set("public", "watt_quality_check", function(watt){
+  missing_power <- watt == 65535
   if(sum(missing_power)){
     message("Performing Watt quality check.")
     message("Detecting watt values equal to 65535.")
     message("Probably connection to Wahoo kickr core was temporarily timeout out.")
     message("Replacing 65535 with 0.")
-    self$watt[missing_power] <- 0 
+    watt[missing_power] <- 0 
   }
   
 })
@@ -132,8 +137,9 @@ cyclist$set("public", "upload_workouts", function(){
   }
 })
 
-cyclist$set("public", "create_watt", function(hr){
+cyclist$set("public", "create_watt", function(records){
   
+  print("inside create_watt")
   nrg = create_nrg()
   nrg$hr <- round(nrg$hr)
   nrg$power <- nrg$watt
@@ -144,23 +150,25 @@ cyclist$set("public", "create_watt", function(hr){
   if(!has_hr){
     
     message("Could not find any heart rate data. Set all watt values to 100.")
-    self$watt <- rep(100, nrow(self$workout$records))
+    records$watt <- rep(100, nrow(records))
     
   }else{
-    self$workout$records <- plyr::join(self$workout$records, nrg, by = "heart_rate")
-    has_cadence <- !is.null(self$workout$records$cadence)
+    records <- plyr::join(records, nrg, by = "heart_rate")
+    has_cadence <- !is.null(records$cadence)
     if(has_cadence){
-      self$workout[self$workout$records$cadence == 0, "power"] <- 0
+      records[records$cadence == 0, "power"] <- 0
     }
-    self$watt <- self$workout$records$power
+    records$watt <- records$power
   }
-  
+  return(records)
 })
 
+# file_name <- "biketrainr-master/data/Afternoon_Ride.fit"
+# file_name <- "C:/Users/Tonio/Downloads/Feldberg_2.fit"
+# self <- list()
 cyclist$set("public", "add_workout", function(file_name){
   
-  print("file_name")
-  print(file_name)
+  print("inside add_workout")
   workout_raw <- tryCatch(parse_strava(file_name),
                                error = function(e){
                                  print(e)
@@ -186,11 +194,15 @@ cyclist$set("public", "add_workout", function(file_name){
     return()
   }
   
-  self$watt <- self$workout$records$power
+  # todo: could refactor that self$watt is not necessary
   no_watts <- is.null(self$watt)
-  if(no_watts) self$create_watt(self$workout$records$heart_rate)
-  self$watt_quality_check()
+  if(no_watts) self$workout$records <- self$create_watt(records = self$workout$records)
+  self$workout$records$watt <- self$watt_quality_check(self$workout$records$watt)
   
+  print("starting used energy")
+  self$energy <- used_energy(self$workout$records$power, self$nrg)
+  
+  print("njet")
   # approximation n = amount secs
   # n_secs <- length(self$watt)
   n_secs <- nrow(self$workout$records)
@@ -199,7 +211,9 @@ cyclist$set("public", "add_workout", function(file_name){
   duration <- gsub(pattern = "S", replacement = "", x = duration)
   duration <- sapply(strsplit(duration, "[:]")[[1]], function(c) ifelse(nchar(c) == 1, paste0("0", c), c)) %>% 
     paste(collapse = ":")# add zeros
-  NP <- self$calc_NP(self$watt)
+  
+  
+  NP <- self$calc_NP(self$workout$records$power)
   
   has_workouts <- length(self$workouts)
   workout_date = self$workout$meta$date
@@ -218,7 +232,10 @@ cyclist$set("public", "add_workout", function(file_name){
       ATL = rep(self$config$atl_start_val, n_dates),
       TSB = rep(0, n_dates),
       altitude = rep(0, n_dates),
-      distance = rep(0, n_dates)
+      distance = rep(0, n_dates),
+      kcal = rep(0, n_dates),
+      carbs = rep(0, n_dates),
+      fat = rep(0, n_dates)
     )
     
     self$meta$TSS[length(self$meta$TSS)] <- NA
@@ -239,7 +256,10 @@ cyclist$set("public", "add_workout", function(file_name){
         ATL = rep(self$config$atl_start_val, n_dates),
         TSB = rep(0, n_dates),
         altitude = rep(0, n_dates),
-        distance = rep(0, n_dates)
+        distance = rep(0, n_dates),
+        kcal = rep(0, n_dates),
+        carbs = rep(0, n_dates),
+        fat = rep(0, n_dates)
       )
       self$meta <- rbind(
         meta_to_add,
@@ -263,7 +283,10 @@ cyclist$set("public", "add_workout", function(file_name){
       ATL = rep(self$config$atl_start_val, n_dates),
       TSB = rep(0, n_dates),
       altitude = rep(0, n_dates),
-      distance = rep(0, n_dates)
+      distance = rep(0, n_dates),
+      kcal = rep(0, n_dates),
+      carbs = rep(0, n_dates),
+      fat = rep(0, n_dates)
     )
     self$meta <- rbind(
       self$meta,
@@ -276,6 +299,13 @@ cyclist$set("public", "add_workout", function(file_name){
   self$meta[self$meta$dates == workout_date, ]$altitude <- self$workout$meta$altitude
   self$meta[self$meta$dates == workout_date, ]$distance <- self$workout$meta$distance / 1000
   
+  self$meta[self$meta$dates == workout_date, ]$kcal <- self$energy$kcal
+  self$meta[self$meta$dates == workout_date, ]$carbs <- self$energy[[1]]$carbs_from_ma %>% round
+  self$meta[self$meta$dates == workout_date, ]$fat <- self$energy[[2]]$fat_from_ma %>% round
+  
+  self$energy
+  
+  print("starting calc meta")
   self$calc_meta()
   
   self$workouts <- c(self$workouts, list(self$workout))
@@ -290,7 +320,10 @@ cyclist$set("public", "add_workout", function(file_name){
     NP = NP,
     file_name = file_name,
     altitude = self$workout$meta$altitude,
-    distance = self$workout$meta$distance / 1000
+    distance = self$workout$meta$distance / 1000,
+    kcal = self$energy$kcal,
+    carbs = self$energy[[1]]$carbs_from_ma %>% round,
+    fat = self$energy[[2]]$fat_from_ma %>% round
   )
 
   self$workout_details <- rbind(self$workout_details, workout_details_add)
@@ -351,8 +384,14 @@ cyclist$set("public", "calc_meta", function(){
 # user_name <- "shiny"
 # sportler <- list(name = user_name)
 # sportler$cyclist <- cyclist$new()
+# sportler$cyclist$nrg
 # # # # #
-# file_name <- "C:/Users/Tonio/Downloads/Feldberg_2.fit"
+# file_name <- "C:/Users/Tonio/Downloads/Erstes_wieder_antesten.fit"
+# sportler$cyclist$file_names <- file_name
+# sportler$cyclist$upload_workouts()
+# 
+# sportler$cyclist$energy
+
 # file_name <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/2022-03-09-190632-UBERDROID7506-27-0.fit"
 # # # file_name <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/fitfiletools.fit"
 # # # all <- list.files(file_path, pattern = "*.fit")
