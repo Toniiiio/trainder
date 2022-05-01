@@ -136,7 +136,7 @@ server <- function(input, output, session) {
     
     df <- data.frame(cyclist1()$workout_details)
     if(nrow(df)){
-      out <- DT::dataTableOutput("workout_details_table", width = "50%")
+      out <- withSpinner(DT::dataTableOutput("workout_details_table", width = "50%"), type = 2)
     }else{
       out <- h5(
         tags$a("Upload", href ="javascript:Shiny.setInputValue('switch_panel', Math.random());"), 
@@ -191,14 +191,14 @@ server <- function(input, output, session) {
     df$edit <- shinyInput(actionButton, nrow(df), paste0('edit_', df$id), label = "Edit", onclick = 'Shiny.onInputChange(\"edit_workout\",  {id: this.id, random: Math.random()})')
     df$link <- shinyInput(actionButton, nrow(df), paste0('view_', df$id), label = "View", onclick = 'Shiny.onInputChange(\"view_workout\",  {id: this.id, random: Math.random()})')
     df$km <- round(df$distance, 2)
-    df$altitude <- round(df$altitude)
+    df$altitude_gain <- round(df$altitude)
     df$title <- "Bike ride"
     add_energy <- NULL
     if(!is.null(df$kcal)){
       add_energy <- c("kcal", "carbs", "fat")
       df$kcal <- round(df$kcal)
     } 
-    df[, c("title", "weekday", "date", "duration", "km", "altitude", "TSS", "IF", "NP", add_energy, "delete", "edit", "link")]
+    df[, c("title", "weekday", "date", "duration", "km", "altitude_gain", "TSS", "IF", "NP", add_energy, "delete", "edit", "link")]
   }, options = list(
     pageLength = 10
   ), escape = FALSE)

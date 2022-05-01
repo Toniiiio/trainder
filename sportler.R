@@ -122,6 +122,7 @@ cyclist$set("public", "watt_quality_check", function(watt){
     message("Replacing 65535 with 0.")
     watt[missing_power] <- 0 
   }
+  return(watt)
   
 })
 
@@ -164,7 +165,7 @@ cyclist$set("public", "create_watt", function(records){
 })
 
 # file_name <- "biketrainr-master/data/Afternoon_Ride.fit"
-# file_name <- "C:/Users/Tonio/Downloads/Feldberg_2.fit"
+# file_name <- "C:/Users/Tonio/Downloads/Evening_Ride.fit"
 # self <- list()
 cyclist$set("public", "add_workout", function(file_name){
   
@@ -195,9 +196,9 @@ cyclist$set("public", "add_workout", function(file_name){
   }
   
   # todo: could refactor that self$watt is not necessary
-  no_watts <- is.null(self$watt)
+  no_watts <- is.null(self$workout$records$power)
   if(no_watts) self$workout$records <- self$create_watt(records = self$workout$records)
-  self$workout$records$watt <- self$watt_quality_check(self$workout$records$watt)
+  self$workout$records$power <- self$watt_quality_check(watt = self$workout$records$power)
   
   print("starting used energy")
   self$energy <- used_energy(self$workout$records$power, self$nrg)
@@ -206,6 +207,8 @@ cyclist$set("public", "add_workout", function(file_name){
   # approximation n = amount secs
   # n_secs <- length(self$watt)
   n_secs <- nrow(self$workout$records)
+  print("n_secs")
+  print(n_secs)
   
   duration <- gsub(pattern = "d |H |M ", replacement = ":", x = lubridate::seconds_to_period(n_secs))
   duration <- gsub(pattern = "S", replacement = "", x = duration)
@@ -381,13 +384,13 @@ cyclist$set("public", "calc_meta", function(){
 
 
 
-# user_name <- "shiny"
-# sportler <- list(name = user_name)
-# sportler$cyclist <- cyclist$new()
+user_name <- "shiny"
+sportler <- list(name = user_name)
+sportler$cyclist <- cyclist$new()
 # sportler$cyclist$nrg
 # # # # #
-# file_name <- "C:/Users/Tonio/Downloads/Erstes_wieder_antesten.fit"
-# sportler$cyclist$file_names <- file_name
+file_name <- "C:/Users/Tonio/Downloads/Evening_Ride.fit"
+sportler$cyclist$file_names <- file_name
 # sportler$cyclist$upload_workouts()
 # 
 # sportler$cyclist$energy

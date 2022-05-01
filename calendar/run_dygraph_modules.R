@@ -24,21 +24,21 @@ ui <- shinyUI(fluidPage(
 
 
 server <- function(input, output, session) {
-  global2 <- reactiveValues(records = NULL)
+  global <- reactiveValues(records = NULL)
   
   observeEvent(input$upload, {
     file_name <- "biketrainr-master/data/02_04_2022_LIT.fit"
+    file_name <- "C:/Users/Tonio/Downloads/Feldberg_2.fit"
     source("load_strava.R")  
-    global2$records <- load_strava(file_name = file_name)
+    global$records <- load_strava(file_name = file_name)
   })
   
   #records <- mtcars#createRecords(id = "try2")
   observe({
     
-    if(!is.null(global2$records)){
+    if(!is.null(global$records)){
       out <- modUI("try", "try")
-      workout <- list(records = global2$records, meta = NULL)
-      mod <- modServer(id = "try", workouts = list(workout, workout))
+      mod <- modServer(id = "try", global = global)
     }else{
       out <- h5(
         tags$a("Upload", href ="javascript:Shiny.setInputValue('switch_panel', Math.random());"), 

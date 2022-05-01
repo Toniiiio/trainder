@@ -3,15 +3,19 @@ create_dygraph_data <- function(records){
   track_raw$lat <- track_raw$position_lat
   track_raw$lon <- track_raw$position_long
   if(!is.null(track_raw$heart_rate)) track_raw$heart_rate %<>% as.numeric()
+  
+  # todo: why raw?
   track <- track_raw
   track$distance %<>% round
   if(is.null(track$enhanced_altitude)) track$enhanced_altitude <- track$altitude
+  track$enhanced_altitude %<>% round(digits = 1)
+  track$speed <- track$speed*3.6 
   idx <- which("heart_rate" == names(track) | "enhanced_altitude" == names(track) | 
               "speed" == names(track) | "power" == names(track))
   qxts <- xts(track[, idx], order.by = track$time)
   has_na <- is.na(track_raw) %>% sum
   if(has_na) stop("NA in data")
-  return(list(qxts = qxts, track_raw = track_raw))
+  return(list(qxts = qxts, track_raw = track))
 }
 
 # First: Handover workouts - will only be handovered if there is an etry otherwise it would not be called
@@ -115,6 +119,7 @@ modServer <- function(id, workouts, global) {
         # req(global$dy_updated_at == TRUE)
         # print(global$dy_updated_at)
         
+        # todo: this is doubled, see above?
         from = req(input$dygraph_date_window[[1]])
         to = req(input$dygraph_date_window[[2]])
         from <- strptime(from, "%Y-%m-%dT%H:%M:%OSZ") + 2*3600
@@ -145,9 +150,11 @@ modServer <- function(id, workouts, global) {
       observeEvent(c(global$dy_updated_at, input$choose_seq), {
         
         global$keep_time
+        req(input$choose_seq)
         req(global$track_raw)
         req(global$track_raw$lon)
         req(global$track_raw$lat)
+        print("inside observeEvent dy_upd")
         
         if(!is.null(global$sub_seq)){
           global$sub_track <- global$track_raw[global$sub_seq[[input$choose_seq]], ]
@@ -279,11 +286,13 @@ modServer <- function(id, workouts, global) {
       
       
       output$dygraph <- renderDygraph({
-        
-        req(global$dy_track)
-        global$trigger_dygraph_update
-        # print("keep time")
+
+        global$qxts
+        # global$trigger_dygraph_update
+
         isolate({
+          req(global$dy_track)
+          print("inside render dygraph") 
           track <- global$dy_track
           # print(str(track))
           track$speed %<>% as.numeric
@@ -291,26 +300,33 @@ modServer <- function(id, workouts, global) {
           
           graph <- dygraph(global$qxts, main = "Bike ride")
           
-
-          range <- c(0, max(c(global$qxts$heart_rate, global$qxts$power)))
-          if(!is.null(global$qxts$heart_rate)){
-            graph %<>%
-              dyAxis("y", label = "Heart rate", valueRange = range, 
-                     valueFormatter = paste0("function(v, opts, seriesName, dygraph, row) {
+          valueFormatter <- paste0("function(v, opts, seriesName, dygraph, row) {
               Shiny.onInputChange('", session$ns("mouse"),"', {'x': row, 'val': v})
             	return v;
-            }")) %>% 
+            }")
+
+          range <- c(0, max(c(global$qxts$heart_rate, global$qxts$power)))
+          has_heart_rate <- !is.null(global$qxts$heart_rate)
+          if(has_heart_rate){
+            graph %<>%
+              dyAxis("y", label = "Heart rate", valueRange = range, 
+                     valueFormatter = valueFormatter) %>% 
               dyLimit(hr_lit[1], color = "blue") %>%
               dyLimit(hr_lit[2], color = "blue") %>%
               dyLimit(hr_lit[3], color = "blue") %>%
               dyRangeSelector()
+            
+            # do not need it again: 
+            valueFormatter <- NULL
           }
           
           if(!is.null(global$qxts$enhanced_altitude)){
             print("xx")
+            altitude <- global$qxts$enhanced_altitude
+            range <- c(min(altitude), max(altitude, 300))
             graph %<>%
-              # dyAxis("y2", label = "altitude", independentTicks = TRUE) %>%
-              dySeries("enhanced_altitude", axis = ('y2'), fillGraph = TRUE, color = "grey", strokeWidth = 1)
+              dyAxis("y2", label = "altitude", valueFormatter = valueFormatter, valueRange = range, independentTicks = TRUE) %>%
+              dySeries("enhanced_altitude", axis = ('y2'),  fillGraph = TRUE, color = "grey", strokeWidth = 1)
           }
           
           if(!is.null(global$qxts$watt)){
@@ -323,6 +339,29 @@ modServer <- function(id, workouts, global) {
 
         })
         
+      })
+      
+      output$averages <- renderUI({
+        req(global$heart_range)
+        track_subset <- global$track_raw[global$heart_range, ]
+        
+        has_watt <- !is.null(track_subset$power)
+        has_heart_rate <- !is.null(track_subset$heart_rate)
+        has_speed <- !is.null(track_subset$speed) # should be included, but for stability of the app
+        
+        average_watt <- NULL
+        average_heart_rate <- NULL
+        average_speed <- NULL        
+        if(has_watt) average_watt <- div(strong("Average power: "), track_subset$power %>% mean %>% round, "watts", inline = TRUE)
+        if(has_heart_rate) average_heart_rate <- div(strong("Average heart rate: "), track_subset$heart_rate %>% mean %>% round(digits = 2), "bpm", inline = TRUE)
+        if(has_speed) average_speed <- div(strong("Average speed: "), track_subset$speed %>% mean %>% round(digits = 2), "km/h", inline = TRUE)
+        
+        tagList(
+          average_watt,
+          average_heart_rate,
+          average_speed 
+        )
+
       })
       
       output$from <- renderText({
@@ -358,6 +397,7 @@ modUI <- function(id, label = "CSV file") {
         div(strong("From: "), textOutput(ns("from"), inline = TRUE)),
         div(strong("To: "), textOutput(ns("to"), inline = TRUE)),
         div(strong("Date: "), textOutput(ns("clicked"), inline = TRUE)),
+        uiOutput(ns("averages")),
         br(),
         uiOutput(ns("create_seq")),
         br(),
@@ -365,7 +405,7 @@ modUI <- function(id, label = "CSV file") {
       ),
       mainPanel(
         uiOutput(ns("select_workout_for_leaflet")),
-        div(id = "msvr", dygraphOutput(ns("dygraph"))),
+        div(id = "msvr", dygraphOutput(ns("dygraph")), height = 200),
         leafletOutput(ns('trackmap'))
       )
     )
