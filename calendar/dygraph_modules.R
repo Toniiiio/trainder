@@ -405,7 +405,7 @@ modUI <- function(id, label = "CSV file") {
       ),
       mainPanel(
         uiOutput(ns("select_workout_for_leaflet")),
-        div(id = "msvr", dygraphOutput(ns("dygraph")), height = 200),
+        div(id = "msvr", dygraphOutput(ns("dygraph"), height = "200px")),
         leafletOutput(ns('trackmap'))
       )
     )
