@@ -1,5 +1,12 @@
+
+# file_name <- "C:/Users/Tonio/Downloads/Afternoon_Ride (2).fit"
+# file_name <- "biketrainr-master/data/01_04_2022_Evening_Ride.fit"
+# records <- load_strava(file_name)
 create_dygraph_data <- function(records){
   track_raw <- records
+  # has_na <- is.na(track_raw) %>% sum
+  # if(has_na) stop("NA in data")
+  
   track_raw$lat <- track_raw$position_lat
   track_raw$lon <- track_raw$position_long
   if(!is.null(track_raw$heart_rate)) track_raw$heart_rate %<>% as.numeric()
@@ -13,8 +20,6 @@ create_dygraph_data <- function(records){
   idx <- which("heart_rate" == names(track) | "enhanced_altitude" == names(track) | 
               "speed" == names(track) | "power" == names(track))
   qxts <- xts(track[, idx], order.by = track$time)
-  has_na <- is.na(track_raw) %>% sum
-  if(has_na) stop("NA in data")
   return(list(qxts = qxts, track_raw = track))
 }
 
@@ -50,6 +55,8 @@ modServer <- function(id, workouts, global) {
         req(sel <= length(workouts))
         records <- workouts[[sel]]$records
 
+        print(head(records))
+        print(sum(is.na(records)))
         out <- create_dygraph_data(records)
         qxts <- out$qxts
         track_raw <- out$track_raw
@@ -284,22 +291,23 @@ modServer <- function(id, workouts, global) {
         global$dy_track <- global$track_raw[global$keep_time, ]
       })
       
+      output$dygraphs <- renderUI({
+        tagList(
+          dygraphOutput(ns("dy_watt"), height = "100px"),
+          dygraphOutput(ns("dy_altitude"), height = "100px"),
+          dygraphOutput(ns("dy_heart_rate"), height = "100px")
+          
+        )
+      })
       
-      output$dygraph <- renderDygraph({
-
-        global$qxts
-        # global$trigger_dygraph_update
+      observeEvent(global$qxts, {
 
         isolate({
           req(global$dy_track)
           print("inside render dygraph") 
           track <- global$dy_track
-          # print(str(track))
           track$speed %<>% as.numeric
-          # df <- data.frame(x = track$time, y = track$speed) # toberemoved
-          
-          graph <- dygraph(global$qxts, main = "Bike ride")
-          
+
           valueFormatter <- paste0("function(v, opts, seriesName, dygraph, row) {
               Shiny.onInputChange('", session$ns("mouse"),"', {'x': row, 'val': v})
             	return v;
@@ -307,35 +315,47 @@ modServer <- function(id, workouts, global) {
 
           range <- c(0, max(c(global$qxts$heart_rate, global$qxts$power)))
           has_heart_rate <- !is.null(global$qxts$heart_rate)
+          
           if(has_heart_rate){
-            graph %<>%
-              dyAxis("y", label = "Heart rate", valueRange = range, 
-                     valueFormatter = valueFormatter) %>% 
-              dyLimit(hr_lit[1], color = "blue") %>%
-              dyLimit(hr_lit[2], color = "blue") %>%
-              dyLimit(hr_lit[3], color = "blue") %>%
-              dyRangeSelector()
+            
+            # %>% dyRangeSelector()
+            
+            output$dy_heart_rate <- renderDygraph({
+              graph <- dygraph(global$qxts$heart_rate)
+              graph %<>%
+                dyAxis("y", label = "Heart rate", valueFormatter = valueFormatter) %>% 
+                dyCrosshair(direction = "vertical") %>% 
+                dyLimit(hr_lit[1], color = "blue") %>%
+                dyLimit(hr_lit[2], color = "blue") %>%
+                dyLimit(hr_lit[3], color = "blue") 
+            })
             
             # do not need it again: 
             valueFormatter <- NULL
           }
           
           if(!is.null(global$qxts$enhanced_altitude)){
-            print("xx")
             altitude <- global$qxts$enhanced_altitude
             range <- c(min(altitude), max(altitude, 300))
-            graph %<>%
-              dyAxis("y2", label = "altitude", valueFormatter = valueFormatter, valueRange = range, independentTicks = TRUE) %>%
-              dySeries("enhanced_altitude", axis = ('y2'),  fillGraph = TRUE, color = "grey", strokeWidth = 1)
+            
+            output$dy_altitude <- renderDygraph({
+              graph <- dygraph(global$qxts$enhanced_altitude)
+              graph %<>% dyAxis("y", label = "altitude", valueFormatter = valueFormatter, valueRange = range) %>%
+                dyCrosshair(direction = "vertical") %>% 
+                dySeries("enhanced_altitude", axis = 'y',  fillGraph = TRUE, color = "brown", strokeWidth = 1)
+            })
           }
           
-          if(!is.null(global$qxts$watt)){
-            graph %<>%
-              dyAxis("y2", label = "watt", independentTicks = TRUE, valueRange = range) %>%
-              dySeries("watt", axis = ('y2'), color = "black", strokeWidth = 1, strokePattern = "dashed")
+          if(!is.null(global$qxts$power)){
+            output$dy_watt <- renderDygraph({
+              graph <- dygraph(global$qxts$power)
+              graph %<>% dyAxis("y", label = "watt") %>%
+                dyCrosshair(direction = "vertical") %>% 
+                dyLimit(140, color = "blue") %>%
+                dyLimit(215, color = "blue")
+              #   dySeries("watt", axis = ('y2'), color = "black", strokeWidth = 1, strokePattern = "dashed")
+            })
           }
-          
-          graph
 
         })
         
@@ -353,13 +373,13 @@ modServer <- function(id, workouts, global) {
         average_heart_rate <- NULL
         average_speed <- NULL        
         if(has_watt) average_watt <- div(strong("Average power: "), track_subset$power %>% mean %>% round, "watts", inline = TRUE)
-        if(has_heart_rate) average_heart_rate <- div(strong("Average heart rate: "), track_subset$heart_rate %>% mean %>% round(digits = 2), "bpm", inline = TRUE)
+        if(has_heart_rate) average_heart_rate <- div(strong("Average heart rate: "), track_subset$heart_rate %>% mean %>% round, "bpm", inline = TRUE)
         if(has_speed) average_speed <- div(strong("Average speed: "), track_subset$speed %>% mean %>% round(digits = 2), "km/h", inline = TRUE)
         
         tagList(
           average_watt,
           average_heart_rate,
-          average_speed 
+          average_speed
         )
 
       })
@@ -394,7 +414,7 @@ modUI <- function(id, label = "CSV file") {
   tagList(
     sidebarLayout(
       sidebarPanel(
-        div(strong("From: "), textOutput(ns("from"), inline = TRUE)),
+        div(strong("From88: "), textOutput(ns("from"), inline = TRUE)),
         div(strong("To: "), textOutput(ns("to"), inline = TRUE)),
         div(strong("Date: "), textOutput(ns("clicked"), inline = TRUE)),
         uiOutput(ns("averages")),
@@ -405,7 +425,7 @@ modUI <- function(id, label = "CSV file") {
       ),
       mainPanel(
         uiOutput(ns("select_workout_for_leaflet")),
-        div(id = "msvr", dygraphOutput(ns("dygraph"), height = "200px")),
+        uiOutput(ns("dygraphs")),
         leafletOutput(ns('trackmap'))
       )
     )

@@ -87,7 +87,7 @@ check_power <- function(records){
 
   w <- sapply(records$heart_rate, function(hr) which.min(abs(hr - nrg$hr)))
 
-  plot(nrg$watt[w], records$power)
+  # plot(nrg$watt[w], records$power)
 }
 
 # records <- check_power(records)

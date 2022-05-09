@@ -6,7 +6,8 @@ library(magrittr)
 library(plyr)
 
 # file_name <- "Lunch_Ride.fit"
-# file_name <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/Radfahrt_am_Nachmittag.fit"
+# file_name <- "C:/Users/Tonio/Downloads/Afternoon_Ride (2).fit"
+# file_name <- "C:/Users/Tonio/Downloads/Been_a_while_.fit"
 # file_name <- "C:/Users/User11/Downloads/" %>%
 #   {file.path(., list.files(.))} %>%
 #   file.info() %>%
@@ -34,18 +35,31 @@ load_strava <- function(file_name){
   for(nr in seq(strava_records)[-1]){
     strava_data <- merge(strava_data, strava_records[[nr]], all = TRUE, by = "timestamp", no.dups = TRUE)
   }
+  # plot(strava_data$power)
+  # plot(strava_data$power.x)
+  # plot(strava_data$power.y)
   
   strava_data %>% head
   amt_na <- apply(strava_data, 2, function(col) sum(is.na(col))) / dim(strava_data)[1]
   keep <- which(amt_na < 0.99)
   strava_data <- strava_data[, keep]
   
-  strava_data <- zoo::na.locf(strava_data)
+  # targets <- c("heart_rate", "timestamp", "cadence", "gps_accuracy", "position", "power", "speed")
+  # matches <- sapply(targets, grepl, names(strava_data))
+  # keep <- apply(matches, 2, which) %>% unlist
+  # strava_data <- strava_data[, keep]
+
+  strava_data <- zoo::na.locf(strava_data, na.rm = FALSE)  
+  idx <- which(grepl("distance", names(strava_data)))[1]
+  start <- which(!is.na(strava_data[, idx])) %>% min
+  strava_data <- strava_data[start:nrow(strava_data), ]
+  
+  names(strava_data)
   names(strava_data) <- gsub(pattern = "[.].*", replacement = "", x = names(strava_data))
   strava_data %>% head
   strava_data
   
-  # keep <- strava_records %>%
+    # keep <- strava_records %>%
   #   lapply(dim) %>%
   #   lapply(prod) %>%
   #   which.max

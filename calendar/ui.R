@@ -1,8 +1,9 @@
-source("calendar/dygraph_modules.R")
+
 ui <- fluidPage(
   tags$style(
     type = 'text/css',
-    '.modal-dialog { width: fit-content !important; }'
+    '.modal-dialog { width: fit-content !important; }
+    .dygraph-axis-label-x:nth-of-type(-n+1) {display: none !important; }'
   ),
   tags$h4("Training calendar"),
   useShinyjs(),
