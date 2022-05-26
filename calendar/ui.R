@@ -25,6 +25,9 @@ ui <- fluidPage(
                       fileInput("file1", "Choose  File",
                                 multiple = TRUE,
                                 accept = ".fit")
+               ),
+               column(width = 2,
+                      checkboxInput("stich", "stich files")
                )
              ),
              fluidRow(

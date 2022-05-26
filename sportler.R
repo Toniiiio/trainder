@@ -55,6 +55,7 @@ library(R6)
 library(lubridate)
 source("load_strava.R")
 source("biketrainr-master/R/gen_energy_data.R")
+source("calendar/analyse_energy.R")
 
 user_name <- "Toniiiio"
 
@@ -96,6 +97,42 @@ cyclist <- R6::R6Class(
     changewd = function(x) {
       private$reactiveDep(isolate(private$reactiveDep()) + 1)
       self$workout_details <- x
+    },
+    
+    update_workouts = function(idx, workout_raw) {
+      private$reactiveDep(isolate(private$reactiveDep()) + 1)
+      print("within update_workouts")
+      
+      existing_workout <- self$workouts[[idx]]
+      id <- existing_workout$meta$id
+      print("id")
+      print(id)
+      idx_del <- which(self$workout_details$id == id)
+      print("idx")
+      print(idx_del)
+      self$workout_details <- self$workout_details[-idx_del, ]
+      
+      recs <- list(
+        existing_workout$records,
+        workout_raw$records
+      )
+      start_first <- max(recs[[1]]$timestamp) < max(recs[[2]]$timestamp)
+      if(start_first){
+        recs[[2]]$distance <- recs[[2]]$distance + max(recs[[1]]$distance)
+        records <- rbind(recs[[1]], recs[[2]])
+      }else{
+        recs[[1]]$distance <- recs[[1]]$distance + max(recs[[2]]$distance)
+        records <- rbind(recs[[2]], recs[[1]])
+      }
+      plot(records$distance, type = "l")
+      print("max(records$distance)")
+      print(max(records$distance))
+      self$workout$meta <- calculate_meta(records)
+      print("self$workout$metaaaaa")
+      print(self$workout$meta)
+      
+      self$workouts[[idx]] <- NULL
+      return(records)
     }
   )
 )
@@ -186,14 +223,35 @@ cyclist$set("public", "add_workout", function(file_name){
     # self$workout_raw$meta$distance == w$meta$distance & w$meta$date == w$meta$date
   })))
   
-  workout_id <- uuid::UUIDgenerate(use.time = TRUE)
-  workout_raw$meta$id <- workout_id
-  self$workout <- workout_raw
-  
   if(workout_duplicate){
     message("Workout was already uploaded!")
     return()
   }
+  
+  # check for stitching
+  # stich
+  same_day <- sapply(self$workouts, function(w){
+    names(workout_raw$meta)
+    w$meta$date == workout_raw$meta$date
+    # self$workout_raw$meta$distance == w$meta$distance & w$meta$date == w$meta$date
+  })
+  
+  self$workout <- workout_raw
+  
+
+  print("same_day")
+  print(same_day)
+  has_same_day <- sum(unlist(same_day))
+  if(has_same_day){
+    idx <- same_day[1]
+    records <- self$update_workouts(idx, workout_raw)
+    self$workout$records <- records
+  }
+  
+  workout_id <- uuid::UUIDgenerate(use.time = TRUE)
+  self$workout$meta$id <- workout_id
+  
+
   
   # todo: could refactor that self$watt is not necessary
   no_watts <- is.null(self$workout$records$power)
@@ -297,6 +355,8 @@ cyclist$set("public", "add_workout", function(file_name){
     )
   }
   
+  print("self$workout$meta$distance")
+  print(self$workout$meta$distance)
   TSS = n_secs*NP^2 / (self$FTP^2 * 3600)*100
   self$meta[self$meta$dates == workout_date, ]$TSS <- TSS
   self$meta[self$meta$dates == workout_date, ]$altitude <- self$workout$meta$altitude
@@ -312,6 +372,9 @@ cyclist$set("public", "add_workout", function(file_name){
   self$calc_meta()
   
   self$workouts <- c(self$workouts, list(self$workout))
+  
+  print("self$workout$meta$distance")
+  print(self$workout$meta$distance)
   
   workout_details_add <- data.frame(
     id = workout_id,
@@ -384,16 +447,17 @@ cyclist$set("public", "calc_meta", function(){
 
 
 
-user_name <- "shiny"
-sportler <- list(name = user_name)
-sportler$cyclist <- cyclist$new()
-# sportler$cyclist$nrg
-# # # # #
-file_name <- "C:/Users/Tonio/Downloads/Evening_Ride.fit"
-sportler$cyclist$file_names <- file_name
+# user_name <- "shiny"
+# sportler <- list(name = user_name)
+# sportler$cyclist <- cyclist$new()
+# # sportler$cyclist$nrg
+# # # # # #
+# file_name <- "biketrainr-master/data/stitch (1).fit"
+# # file_name <- "C:/Users/Tonio/Downloads/Evening_Ride.fit"
+# sportler$cyclist$file_names <- file_name
 # sportler$cyclist$upload_workouts()
-# 
-# sportler$cyclist$energy
+# sportler$cyclist$workouts
+  # sportler$cyclist$energy
 
 # file_name <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/2022-03-09-190632-UBERDROID7506-27-0.fit"
 # # # file_name <- "C:/Users/Tonio/Downloads/WorkoutFileExport-Liebrand-Tonio-2021-05-31-2022-05-27/fitfiletools.fit"

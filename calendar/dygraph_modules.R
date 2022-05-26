@@ -14,8 +14,11 @@ create_dygraph_data <- function(records){
   # todo: why raw?
   track <- track_raw
   track$distance %<>% round
+  # todo could refactor here.
+  print("googog")
   if(is.null(track$enhanced_altitude)) track$enhanced_altitude <- track$altitude
-  track$enhanced_altitude %<>% round(digits = 1)
+  if(!is.null(track$enhanced_altitude)) track$enhanced_altitude %<>% round(digits = 1) # if there is no altitude - e.g. indoor training
+  print("nonono")
   track$speed <- track$speed*3.6 
   idx <- which("heart_rate" == names(track) | "enhanced_altitude" == names(track) | 
               "speed" == names(track) | "power" == names(track))

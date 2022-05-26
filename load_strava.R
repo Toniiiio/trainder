@@ -54,7 +54,6 @@ load_strava <- function(file_name){
   start <- which(!is.na(strava_data[, idx])) %>% min
   strava_data <- strava_data[start:nrow(strava_data), ]
   
-  names(strava_data)
   names(strava_data) <- gsub(pattern = "[.].*", replacement = "", x = names(strava_data))
   strava_data %>% head
   strava_data
@@ -70,16 +69,18 @@ load_strava <- function(file_name){
   # strava_data
 }
 
-# file_name <- "biketrainr-master/data/Afternoon_Ride.fit"
+# file_name <- "biketrainr-master/data/Cardada.fit"
 # records <- load_strava(file_name)
 # head(records)
 
 # file_name <- "C:/Users/Tonio/Downloads/Afternoon_Ride.fit"
+# file_name <- "biketrainr-master/data/wahoo_25_05.fit"
 # parsed <- parse_strava(file_name)
+# parsed %>% head
 # parsed$meta$altitude
-parse_strava <- function(file_name){
-  records <- load_strava(file_name)
-  
+
+calculate_meta <- function(records){
+ 
   time_range <- records$timestamp %>% range
   hr_avg <- mean(records$heart_rate)
   date <- as.Date(records[1, ]$timestamp)
@@ -97,14 +98,29 @@ parse_strava <- function(file_name){
     sum_altitude <- 0
   }
   
+  print("99_max(records$distance)")
+  print(max(records$distance))
   distance <- max(records$distance)
+  stitch_value <- which(diff(records$distance) < 0) # does distance start lower again? --> is stichted
+  if(length(stitch_value)){
+    print("insiiiide")
+    dist_1 <- records$distance[stitch_value]
+    dist_2 <- records$distance[length(records$distance)]
+    distance <- dist_1 + dist_2
+  }
+  print("outside")
+  
   duration <- as.numeric(diff(time_range))*60
   hours <- floor(duration/60)
   minutes_raw <- duration - hours*60
   minutes <- floor(minutes_raw)
   seconds <- ceiling((minutes_raw - minutes)*60)
   
+  print("distanceeeeeeeee33")
+  print(distance)
   meta <-  list(
+    is_stitched = FALSE,
+    added_at = Sys.time(),
     distance = distance,
     hours = hours,
     date = date,
@@ -115,6 +131,13 @@ parse_strava <- function(file_name){
     speed_avg = speed_avg,
     hr_avg = hr_avg
   )
+  meta
+}
+
+parse_strava <- function(file_name){
+  records <- load_strava(file_name)
+
+  meta <- calculate_meta(records)  
   
   list(
     records = records,

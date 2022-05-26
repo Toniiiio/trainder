@@ -23,5 +23,3 @@ source("calendar/server.R", encoding = "UTF-8")
 # ui <- secure_app(ui)
 
 runApp(shinyApp(ui, server), launch.browser = TRUE, port = 9999)
-
-
