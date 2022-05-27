@@ -13,7 +13,7 @@ library(plyr)
 #   file.info() %>%
 #   {rownames(.[which.max(.$atime), ])}
 # file_name
-
+# file_name <- "biketrainr-master/data/4_5min_285_.fit"
 
 # keep <- strava_records %>%
 #   sapply(nrow) %>%
@@ -48,13 +48,25 @@ load_strava <- function(file_name){
   # matches <- sapply(targets, grepl, names(strava_data))
   # keep <- apply(matches, 2, which) %>% unlist
   # strava_data <- strava_data[, keep]
-
+  
   strava_data <- zoo::na.locf(strava_data, na.rm = FALSE)  
   idx <- which(grepl("distance", names(strava_data)))[1]
   start <- which(!is.na(strava_data[, idx])) %>% min
   strava_data <- strava_data[start:nrow(strava_data), ]
   
   names(strava_data) <- gsub(pattern = "[.].*", replacement = "", x = names(strava_data))
+  
+  # extrem starke Steigung unrealistisch, aber mit Zeitstempel doppelchecken
+  # ggf. wurden zeitpunkte ausgelassen 
+  #which(diff(records$altitude) < -20.6) 
+  # which(abs(diff(records$position_lat)) > 1) # for long / lat bounces
+  # strava_data$altitude[strava_data$altitude > 5000] <- NA
+  gpx_idx <- which(strava_data$gps_accuracy == 255)
+  if(length(gpx_idx)){
+    strava_data[idx, c("position_lat", "position_long", "altitude", "speed")] <- NA #   # keep: heart_rate, cadence, timestamp, power
+    strava_data[c(min(idx) - 1, idx), ] <- zoo::na.locf(strava_data[c(min(idx) - 1, idx), ], na.rm = FALSE)
+  }
+  
   strava_data %>% head
   strava_data
   
@@ -71,7 +83,9 @@ load_strava <- function(file_name){
 
 # file_name <- "biketrainr-master/data/Cardada.fit"
 # records <- load_strava(file_name)
-# head(records)
+# plot(records$altitude, type = "l")
+# plot(records$position_lat)
+# plot(records$position_long)
 
 # file_name <- "C:/Users/Tonio/Downloads/Afternoon_Ride.fit"
 # file_name <- "biketrainr-master/data/wahoo_25_05.fit"
@@ -98,8 +112,6 @@ calculate_meta <- function(records){
     sum_altitude <- 0
   }
   
-  print("99_max(records$distance)")
-  print(max(records$distance))
   distance <- max(records$distance)
   stitch_value <- which(diff(records$distance) < 0) # does distance start lower again? --> is stichted
   if(length(stitch_value)){
@@ -108,16 +120,13 @@ calculate_meta <- function(records){
     dist_2 <- records$distance[length(records$distance)]
     distance <- dist_1 + dist_2
   }
-  print("outside")
-  
+
   duration <- as.numeric(diff(time_range))*60
   hours <- floor(duration/60)
   minutes_raw <- duration - hours*60
   minutes <- floor(minutes_raw)
   seconds <- ceiling((minutes_raw - minutes)*60)
   
-  print("distanceeeeeeeee33")
-  print(distance)
   meta <-  list(
     is_stitched = FALSE,
     added_at = Sys.time(),
@@ -145,6 +154,9 @@ parse_strava <- function(file_name){
   )
   
 }
+
+parse_strava(file_name = file_name)
+
 # # head(records)
 # time_range <- records$timestamp %>% range
 # hr_avg <- mean(records$heart_rate)

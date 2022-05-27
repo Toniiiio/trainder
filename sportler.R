@@ -169,10 +169,14 @@ cyclist$set("public", "set_file_names", function(file_names){
 })
 
 
-cyclist$set("public", "upload_workouts", function(){
-  for(file_name in self$file_names){
-    self$add_workout(file_name)
+cyclist$set("public", "upload_workouts", function(to_stitch = FALSE){
+  
+  for(nr in seq(self$file_names)){
+    file_name <- self$file_names[nr]
+    stitch <- to_stitch & nr != 1
+    self$add_workout(file_name, stitch = stitch)
   }
+  
 })
 
 cyclist$set("public", "create_watt", function(records){
@@ -204,13 +208,14 @@ cyclist$set("public", "create_watt", function(records){
 # file_name <- "biketrainr-master/data/Afternoon_Ride.fit"
 # file_name <- "C:/Users/Tonio/Downloads/Evening_Ride.fit"
 # self <- list()
-cyclist$set("public", "add_workout", function(file_name){
+cyclist$set("public", "add_workout", function(file_name, stitch){
   
   print("inside add_workout")
   workout_raw <- tryCatch(parse_strava(file_name),
                                error = function(e){
                                  print(e)
-                                 message(paste0("Fit contents for file with name: ", file_name, " are not correct correct."))
+                                 message(paste0("There are difficulties processing the "))
+                                 message(paste0("Fit contents for file with name: ", file_name, " might not be correct correct."))
                                  return(NULL)
                                }
   )
@@ -242,7 +247,7 @@ cyclist$set("public", "add_workout", function(file_name){
   print("same_day")
   print(same_day)
   has_same_day <- sum(unlist(same_day))
-  if(has_same_day){
+  if(has_same_day & stitch){
     idx <- same_day[1]
     records <- self$update_workouts(idx, workout_raw)
     self$workout$records <- records
@@ -259,6 +264,8 @@ cyclist$set("public", "add_workout", function(file_name){
   self$workout$records$power <- self$watt_quality_check(watt = self$workout$records$power)
   
   print("starting used energy")
+  print(summary(self$workout$records$power))
+  ## depug: nrg <- create_nrg(); energy <- used_energy(records$power, nrg)
   self$energy <- used_energy(self$workout$records$power, self$nrg)
   
   print("njet")

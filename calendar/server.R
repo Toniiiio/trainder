@@ -245,7 +245,7 @@ server <- function(input, output, session) {
       cyclist1()$set_file_names(input$file1$datapath)
       # path <- "biketrainr-master/data/"
       # sportler$cyclist1$file_names <- file.path(path, list.files(path))
-      cyclist1()$upload_workouts()
+      cyclist1()$upload_workouts(to_stitch = input$stitch)
       print("upload_Workouts works")
       print(cyclist1()$workout_details)
       file_name <- paste0("user_data/", global$user_name, ".RData")

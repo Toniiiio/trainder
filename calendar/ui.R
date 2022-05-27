@@ -27,7 +27,7 @@ ui <- fluidPage(
                                 accept = ".fit")
                ),
                column(width = 2,
-                      checkboxInput("stich", "stich files")
+                      checkboxInput("stitch", "stitch files")
                )
              ),
              fluidRow(
