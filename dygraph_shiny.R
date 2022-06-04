@@ -12,7 +12,7 @@
   library(leaflet)
   
   hr_max <- 190
-  hr_lit <- c(124, 146, 162)
+  hr_lit <- c(124, 146, 174)
   
   file_name <- "biketrainr-master/data/02_04_2022_LIT.fit"
   

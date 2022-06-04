@@ -13,7 +13,7 @@ library(plyr)
 #   file.info() %>%
 #   {rownames(.[which.max(.$atime), ])}
 # file_name
-# file_name <- "biketrainr-master/data/4_5min_285_.fit"
+# file_name <- "biketrainr-master/data/fitfiletools (1).fit"
 
 # keep <- strava_records %>%
 #   sapply(nrow) %>%
@@ -63,8 +63,10 @@ load_strava <- function(file_name){
   # strava_data$altitude[strava_data$altitude > 5000] <- NA
   gpx_idx <- which(strava_data$gps_accuracy == 255)
   if(length(gpx_idx)){
-    strava_data[idx, c("position_lat", "position_long", "altitude", "speed")] <- NA #   # keep: heart_rate, cadence, timestamp, power
-    strava_data[c(min(idx) - 1, idx), ] <- zoo::na.locf(strava_data[c(min(idx) - 1, idx), ], na.rm = FALSE)
+    targets <- c("position_lat", "position_long", "altitude", "xx", "enhanced_altitude", "speed")
+    col_idx <- sapply(targets, function(n) which(n == colnames(strava_data))) %>% unlist
+    strava_data[gpx_idx, col_idx] <- NA #   # keep: heart_rate, cadence, timestamp, power
+    strava_data[c(min(gpx_idx) - 1, gpx_idx), ] <- zoo::na.locf(strava_data[c(min(gpx_idx) - 1, gpx_idx), ], na.rm = FALSE)
   }
   
   strava_data %>% head
@@ -155,7 +157,7 @@ parse_strava <- function(file_name){
   
 }
 
-parse_strava(file_name = file_name)
+# xxx <- parse_strava(file_name = file_name)
 
 # # head(records)
 # time_range <- records$timestamp %>% range

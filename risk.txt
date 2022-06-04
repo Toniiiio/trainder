@@ -11,5 +11,43 @@ General Loup-Garou 4675
 # Attackiert bei Gleichstand grundlos einen mit drei Karten und verschafft mir sieg, will er 2ter werden?
 General Loup-Garou 4675
 
+# abwartend und gut gespielt, zur richtigen Zeit agressiv
+General Loup-Garou 4675 
+
 # Wenn chancenlos bombt andere grundlos und ohne Chance zusammen
 Orage Cisco 17
+
+
+# Sehr grundlos agressiv gegen alle und bombt sich trotz Kontinent runter
+Genereal Boom 1475
+
+# baut mich ein und zerstört mich im richtigen Moment - geht aber auch keine grundlosen Kämpfe an - achtung gut!
+General Longtooth 12063
+
+# sehr früher attack - 30 investiert nur 12 bonus award. Killt 2, hat dann 5 karten und wird platt gemacht und helt
+Kyle Dietz (USA)
+
+# killt 20 units für 10 einlösen, überrollt sehr agressiv
+Newell Emerson 25
+
+# Stellt sich in die Mitte von Europa und killt 9 units die in 1er geschütztes Eruopa reinbomben
+WeBeMerkinU
+
+# Bisher reasonable
+Beeman Freeman 31
+
+# General Twist 4475
+Greift ganz gut beschütztes Europa an
+
+# Velvet the Famous 8
+Sehr agressiv - 40 units zerstören für 25 einlösen und danach 5 karten haben und Kontinent verlieren und von 1 auf Platz 3 runter.
+DAuerhaft sehr agressiv. Achtung!
+
+# geht aus KOntinent raus um dann doch reinzubomben
+Daddybird
+
+# attacked schlecht bewachte kontinente (nur 1 defense, aber dann sehr tief)
+Roderick Freedom 20
+
+# zwischendurch sehr agressiv - 6 grundlos aus asien attackiert
+Roderick Freedom 20

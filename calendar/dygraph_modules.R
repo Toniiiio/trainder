@@ -21,7 +21,7 @@ create_dygraph_data <- function(records){
   print("nonono")
   track$speed <- track$speed*3.6 
   idx <- which("heart_rate" == names(track) | "enhanced_altitude" == names(track) | 
-              "speed" == names(track) | "power" == names(track))
+              "speed" == names(track) | "power" == names(track) | "cadence" == names(track))
   qxts <- xts(track[, idx], order.by = track$time)
   return(list(qxts = qxts, track_raw = track))
 }
@@ -44,7 +44,7 @@ modServer <- function(id, workouts, global) {
       # })
       
       hr_max <- 190
-      hr_lit <- c(124, 146, 162)
+      hr_lit <- c(124, 146, 174)
       
       ns <- NS(id)
       
@@ -64,7 +64,7 @@ modServer <- function(id, workouts, global) {
         qxts <- out$qxts
         track_raw <- out$track_raw
         hr_max <- 190
-        hr_lit <- c(124, 146, 162)
+        hr_lit <- c(124, 146, 174)
         
         n <- track_raw %>% nrow
         global$track <- track_raw
@@ -295,12 +295,20 @@ modServer <- function(id, workouts, global) {
       })
       
       output$dygraphs <- renderUI({
-        tagList(
-          dygraphOutput(ns("dy_watt"), height = "100px"),
-          dygraphOutput(ns("dy_altitude"), height = "100px"),
-          dygraphOutput(ns("dy_heart_rate"), height = "100px")
-          
-        )
+        
+        has_heart_rate <- !is.null(global$qxts$heart_rate)
+        has_altitude <- !is.null(global$qxts$altitude)
+        has_power <- !is.null(global$qxts$power)
+        has_cadence <- !is.null(global$qxts$cadence)
+        
+        out <- tagList()
+        if(has_power) out <- tagList(out, dygraphOutput(ns("dy_watt"), height = "100px"))
+        if(has_altitude) out <- tagList(out, dygraphOutput(ns("dy_altitude"), height = "100px"))
+        if(has_heart_rate) out <- tagList(out, dygraphOutput(ns("dy_heart_rate"), height = "100px"))
+        if(has_cadence) out <- tagList(out, dygraphOutput(ns("dy_cadence"), height = "100px"))
+        
+        out
+        
       })
       
       observeEvent(global$qxts, {
@@ -328,6 +336,7 @@ modServer <- function(id, workouts, global) {
               graph %<>%
                 dyAxis("y", label = "Heart rate", valueFormatter = valueFormatter) %>% 
                 dyCrosshair(direction = "vertical") %>% 
+                dySeries("heart_rate", axis = 'y',  fillGraph = TRUE, color = "red", strokeWidth = 1) %>% 
                 dyLimit(hr_lit[1], color = "blue") %>%
                 dyLimit(hr_lit[2], color = "blue") %>%
                 dyLimit(hr_lit[3], color = "blue") 
@@ -336,7 +345,19 @@ modServer <- function(id, workouts, global) {
             # do not need it again: 
             valueFormatter <- NULL
           }
+
+          if(!is.null(global$qxts$cadence)){
+            cadence <- global$qxts$cadence
+            
+            output$dy_cadence <- renderDygraph({
+              graph <- dygraph(global$qxts$cadence)
+              graph %<>% dyAxis("y", label = "cadence", valueFormatter = valueFormatter, valueRange = c(0, max(max(cadence), 120))) %>%
+                dyCrosshair(direction = "vertical") %>% 
+                dySeries("cadence", axis = 'y',  fillGraph = TRUE, color = "purple", strokeWidth = 1)
+            })
+          }
           
+                    
           if(!is.null(global$qxts$enhanced_altitude)){
             altitude <- global$qxts$enhanced_altitude
             range <- c(min(altitude), max(altitude, 300))
@@ -354,6 +375,7 @@ modServer <- function(id, workouts, global) {
               graph <- dygraph(global$qxts$power)
               graph %<>% dyAxis("y", label = "watt") %>%
                 dyCrosshair(direction = "vertical") %>% 
+                dySeries("power", axis = 'y',  fillGraph = TRUE, color = "blue", strokeWidth = 1) %>% 
                 dyLimit(140, color = "blue") %>%
                 dyLimit(215, color = "blue")
               #   dySeries("watt", axis = ('y2'), color = "black", strokeWidth = 1, strokePattern = "dashed")
@@ -417,7 +439,7 @@ modUI <- function(id, label = "CSV file") {
   tagList(
     sidebarLayout(
       sidebarPanel(
-        div(strong("From88: "), textOutput(ns("from"), inline = TRUE)),
+        div(strong("From: "), textOutput(ns("from"), inline = TRUE)),
         div(strong("To: "), textOutput(ns("to"), inline = TRUE)),
         div(strong("Date: "), textOutput(ns("clicked"), inline = TRUE)),
         uiOutput(ns("averages")),

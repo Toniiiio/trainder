@@ -9,6 +9,30 @@ ma <- function(x, n = 5){
 
 
 used_energy <- function(watt, nrg){
+  
+  print("watt")
+  print(head(watt))
+  
+  if(is.null(watt)){
+    return(
+      list(
+        list(
+          carbs_from_ma = 0,
+          carbs_from_avg = 0,
+          carbs_from_single = 0,
+          carbs_range = 0
+        ),
+        list(
+          fat_from_ma = 0,
+          fat_from_avg = 0,
+          fat_from_single = 0,
+          fat_range = 0
+        ),
+        kcal = 0
+      )
+    )
+  }
+  
   avg_power <- watt %>% mean
 
   time <- length(watt)/3600

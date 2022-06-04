@@ -43,15 +43,34 @@ options(scipen = 999)
 
 
 server <- function(input, output, session) {
+
+  observeEvent(input$add_nutrition, {
+    removeModal()
+    carbs <- nutritionals[nutritionals$name == input$nutrition, ]$carbs %>% as.numeric
+    print(carbs)
+    print(input$amt_nutrition)
+    all_carbs <- sum(input$amt_nutrition*carbs)
+    print(input$nutrition)
+    print("all_carbs")
+    print(all_carbs)
+  })
   
-  printLogJs <- function(x, ...) {
+  observeEvent(input$open_nutrition, {
+    showModal(
+      modalDialog(
+        h4("Add Nutritions:"), br(),
+        selectInput("nutrition", label = "Select nutrition", 
+                    choices = nutritionals$name, selectize = TRUE, multiple = TRUE),
+        numericInput("amt_nutrition", "Amount", min = 1, max = 20, 1),
+        actionButton("add_nutrition", "Add"),
+        footer = tagList(
+          actionButton('save_nutrition', 'Save Nutrition'),
+          modalButton('cancel')
+        )
+      )  
+    )
     
-    logjs(x)
-    
-    T
-  }
-  
-  addHandler(printLogJs)
+  })
   
   observeEvent(cyclist1()$workouts, {
     workouts <- cyclist1()$workouts
@@ -190,6 +209,7 @@ server <- function(input, output, session) {
     df$delete <- shinyInput(actionButton, nrow(df), paste0('del_', df$id), label = "Delete", onclick = 'Shiny.onInputChange(\"delete_workout\",  {id: this.id, random: Math.random()})')
     df$edit <- shinyInput(actionButton, nrow(df), paste0('edit_', df$id), label = "Edit", onclick = 'Shiny.onInputChange(\"edit_workout\",  {id: this.id, random: Math.random()})')
     df$link <- shinyInput(actionButton, nrow(df), paste0('view_', df$id), label = "View", onclick = 'Shiny.onInputChange(\"view_workout\",  {id: this.id, random: Math.random()})')
+    df$nutrition <- shinyInput(actionButton, nrow(df), paste0('nutrition_', df$id), label = "Nutrition", onclick = 'Shiny.onInputChange(\"open_nutrition\",  {id: this.id, random: Math.random()})')
     df$km <- round(df$distance, 2)
     df$altitude_gain <- round(df$altitude)
     df$title <- "Bike ride"
@@ -198,7 +218,7 @@ server <- function(input, output, session) {
       add_energy <- c("kcal", "carbs", "fat")
       df$kcal <- round(df$kcal)
     } 
-    df[, c("title", "weekday", "date", "duration", "km", "altitude_gain", "TSS", "IF", "NP", add_energy, "delete", "edit", "link")]
+    df[, c("title", "weekday", "date", "duration", "km", "altitude_gain", "TSS", "IF", "NP", add_energy, "delete", "edit", "link", "nutrition")]
   }, options = list(
     pageLength = 10
   ), escape = FALSE)

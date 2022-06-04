@@ -75,6 +75,7 @@ cyclist <- R6::R6Class(
     workout_details = data.frame(
       id = character(0),
       duration = numeric(0),
+      avg_power = numeric(0),
       TSS = numeric(0),
       IF = numeric(0),
       file_name = character(0),
@@ -119,10 +120,10 @@ cyclist <- R6::R6Class(
       start_first <- max(recs[[1]]$timestamp) < max(recs[[2]]$timestamp)
       if(start_first){
         recs[[2]]$distance <- recs[[2]]$distance + max(recs[[1]]$distance)
-        records <- rbind(recs[[1]], recs[[2]])
+        records <- plyr::rbind.fill(recs[[1]], recs[[2]])
       }else{
         recs[[1]]$distance <- recs[[1]]$distance + max(recs[[2]]$distance)
-        records <- rbind(recs[[2]], recs[[1]])
+        records <- plyr::rbind.fill(recs[[2]], recs[[1]])
       }
       plot(records$distance, type = "l")
       print("max(records$distance)")
@@ -139,6 +140,7 @@ cyclist <- R6::R6Class(
 
 
 cyclist$set("public", "calc_NP", function(watts){
+  if(is.null(watts)) return(0)
   print("starting calc_NP")
   (mean(caTools::runmean(watts, self$config$np_ma_amt_days)^4))^0.25 
 })
@@ -265,7 +267,9 @@ cyclist$set("public", "add_workout", function(file_name, stitch){
   
   print("starting used energy")
   print(summary(self$workout$records$power))
-  ## depug: nrg <- create_nrg(); energy <- used_energy(records$power, nrg)
+  print("error?")
+  print(self$nrg)
+  ## debug: nrg <- create_nrg(); energy <- used_energy(records$power, nrg)
   self$energy <- used_energy(self$workout$records$power, self$nrg)
   
   print("njet")
@@ -282,6 +286,7 @@ cyclist$set("public", "add_workout", function(file_name, stitch){
   
   
   NP <- self$calc_NP(self$workout$records$power)
+  avg_power <- mean(self$workout$records$power)
   
   has_workouts <- length(self$workouts)
   workout_date = self$workout$meta$date
@@ -364,7 +369,14 @@ cyclist$set("public", "add_workout", function(file_name, stitch){
   
   print("self$workout$meta$distance")
   print(self$workout$meta$distance)
-  TSS = n_secs*NP^2 / (self$FTP^2 * 3600)*100
+  
+  calc_TSS <- function(NP, FTP){
+    TSS = n_secs*NP^2 / (self$FTP^2 * 3600)*100
+    if(!length(TSS)) TSS <- 0
+    TSS
+  }
+  TSS <- calc_TSS(NP, FTP)
+  
   self$meta[self$meta$dates == workout_date, ]$TSS <- TSS
   self$meta[self$meta$dates == workout_date, ]$altitude <- self$workout$meta$altitude
   self$meta[self$meta$dates == workout_date, ]$distance <- self$workout$meta$distance / 1000
@@ -383,6 +395,10 @@ cyclist$set("public", "add_workout", function(file_name, stitch){
   print("self$workout$meta$distance")
   print(self$workout$meta$distance)
   
+  print(TSS)
+  print(NP)
+  print(avg_power)
+  
   workout_details_add <- data.frame(
     id = workout_id,
     date = workout_date,
@@ -391,6 +407,7 @@ cyclist$set("public", "add_workout", function(file_name, stitch){
     TSS = TSS,
     IF = NP/self$FTP,
     NP = NP,
+    avg_power = avg_power,
     file_name = file_name,
     altitude = self$workout$meta$altitude,
     distance = self$workout$meta$distance / 1000,

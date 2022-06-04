@@ -9,6 +9,22 @@ ma <- function(x, n = 5){
 
 
 used_energy <- function(records){
+  
+  print("records$power")
+  print(head(records$power))
+
+  if(is.null(records$power)){
+    return(
+      list(
+        list(
+          kcal = numeric(0),
+          carbs_from_ma = numeric(0),
+          fat_from_ma = numeric(0)
+        )
+      )
+    )
+  }
+
   avg_power <- records$power %>% mean
 
   time <- records$timestamp %>%
@@ -75,8 +91,8 @@ used_energy <- function(records){
   )
 }
 
-file_name <- "data/03_04_2022.fit"
-#"data/",
-records <- load_strava(paste0(file_name))
-energy <- used_energy(records)
-energy
+# file_name <- "data/03_04_2022.fit"
+# #"data/",
+# records <- load_strava(paste0(file_name))
+# energy <- used_energy(records)
+# energy
