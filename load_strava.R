@@ -13,7 +13,7 @@ library(plyr)
 #   file.info() %>%
 #   {rownames(.[which.max(.$atime), ])}
 # file_name
-# file_name <- "biketrainr-master/data/fitfiletools (1).fit"
+# file_name <- "biketrainr-master/data/Gravel_Feldberg.fit"
 
 # keep <- strava_records %>%
 #   sapply(nrow) %>%
@@ -63,11 +63,45 @@ load_strava <- function(file_name){
   # strava_data$altitude[strava_data$altitude > 5000] <- NA
   gpx_idx <- which(strava_data$gps_accuracy == 255)
   if(length(gpx_idx)){
-    targets <- c("position_lat", "position_long", "altitude", "xx", "enhanced_altitude", "speed")
+    targets <- c("position_lat", "position_long", "altitude", "speed", "enhanced_altitude", "speed")
     col_idx <- sapply(targets, function(n) which(n == colnames(strava_data))) %>% unlist
     strava_data[gpx_idx, col_idx] <- NA #   # keep: heart_rate, cadence, timestamp, power
     strava_data[c(min(gpx_idx) - 1, gpx_idx), ] <- zoo::na.locf(strava_data[c(min(gpx_idx) - 1, gpx_idx), ], na.rm = FALSE)
   }
+    
+  strava_data$speed <- strava_data$speed*3.6 # m/s -> km/h
+  idx_speed0 <- which(strava_data$speed == 0)
+  # diffs <- c(1, diff(idx_speed0))
+  # diff_diff <- abs(diff(diffs))
+  # diff_diff_before <- c(diff_diff[-1], 0)
+  # diff_diff_after <- c(0, diff_diff[-length(diff_diff)])
+  # anamolies <- which(diff_diff > 0 & diff_diff_before >0 & diff_diff_after > 0)
+  # rles <- rle(diffs)
+  # remove <- rles$lengths == 1
+  # end <- cumsum(rles$lengths)
+  # start <- c(1, 1 + end[-length(end)])
+  # cbind(start, end, remove)
+  strava_data <- strava_data[-idx_speed0, ]
+  # rec <- xxx$records[, c("speed", "timestamp")]
+  diffs <- diff(strava_data$timestamp)
+  idx <- which(diffs != 1)
+  n <- nrow(strava_data)
+  # nrr <- 1
+  for(nrr in seq(idx)){
+    nr <- idx[nrr]
+    strava_data$timestamp[(nr + 1):n] <- strava_data$timestamp[(nr + 1):n] - as.numeric(diffs[nr]) + 1
+  }
+  
+  power_idx <- which(strava_data$power == 65535)
+  if(length(power_idx)){
+    targets <- c("cadence", "power")
+    col_idx <- sapply(targets, function(n) which(n == colnames(strava_data))) %>% unlist
+    strava_data[power_idx, col_idx]  <- NA #   # keep: heart_rate, cadence, timestamp, power
+    strava_data[c(min(power_idx) - 1, power_idx), ] <- zoo::na.locf(strava_data[c(min(power_idx) - 1, power_idx), ], na.rm = FALSE)
+  }
+  
+  # plot(strava_data$speed, type = "l")
+  # plot(strava_data2$speed, type = "l")
   
   strava_data %>% head
   strava_data
@@ -157,7 +191,10 @@ parse_strava <- function(file_name){
   
 }
 
-# xxx <- parse_strava(file_name = file_name)
+# summary(rec$timestamp)
+# qxts <- xts(rec, order.by = rec$timestamp)
+# qxts$timestamp
+# dygraph(qxts)
 
 # # head(records)
 # time_range <- records$timestamp %>% range

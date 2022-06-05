@@ -15,11 +15,10 @@ create_dygraph_data <- function(records){
   track <- track_raw
   track$distance %<>% round
   # todo could refactor here.
-  print("googog")
+  
   if(is.null(track$enhanced_altitude)) track$enhanced_altitude <- track$altitude
   if(!is.null(track$enhanced_altitude)) track$enhanced_altitude %<>% round(digits = 1) # if there is no altitude - e.g. indoor training
-  print("nonono")
-  track$speed <- track$speed*3.6 
+
   idx <- which("heart_rate" == names(track) | "enhanced_altitude" == names(track) | 
               "speed" == names(track) | "power" == names(track) | "cadence" == names(track))
   qxts <- xts(track[, idx], order.by = track$time)
@@ -300,12 +299,14 @@ modServer <- function(id, workouts, global) {
         has_altitude <- !is.null(global$qxts$altitude)
         has_power <- !is.null(global$qxts$power)
         has_cadence <- !is.null(global$qxts$cadence)
+        has_speed <- !is.null(global$qxts$speed)
         
         out <- tagList()
         if(has_power) out <- tagList(out, dygraphOutput(ns("dy_watt"), height = "100px"))
         if(has_altitude) out <- tagList(out, dygraphOutput(ns("dy_altitude"), height = "100px"))
         if(has_heart_rate) out <- tagList(out, dygraphOutput(ns("dy_heart_rate"), height = "100px"))
         if(has_cadence) out <- tagList(out, dygraphOutput(ns("dy_cadence"), height = "100px"))
+        if(has_speed) out <- tagList(out, dygraphOutput(ns("dy_speed"), height = "100px"))
         
         out
         
@@ -346,6 +347,17 @@ modServer <- function(id, workouts, global) {
             valueFormatter <- NULL
           }
 
+          if(!is.null(global$qxts$speed)){
+            speed <- global$qxts$speed
+            
+            output$dy_speed <- renderDygraph({
+              graph <- dygraph(global$qxts$speed)
+              graph %<>% dyAxis("y", label = "speed", valueFormatter = valueFormatter, valueRange = c(0, max(speed))) %>%
+                dyCrosshair(direction = "vertical") %>% 
+                dySeries("speed", axis = 'y',  fillGraph = TRUE, color = "yellow", strokeWidth = 1)
+            })
+          }
+          
           if(!is.null(global$qxts$cadence)){
             cadence <- global$qxts$cadence
             

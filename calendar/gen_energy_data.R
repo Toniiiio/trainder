@@ -12,8 +12,8 @@ create_nrg <- function(){
     fat = c(0, 15, 15, 15, 19, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
   )
 
-  df <- data.frame(watt = 1:520, fat = 0)
-  df$fat[251:520] <- 0
+  df <- data.frame(watt = 1:max(energy$watt), fat = 0)
+  df$fat[251:max(energy$watt)] <- 0
   df$fat[100:160] <- 15
   df$fat[1:100] <- seq(0, 15, length.out = 100)
   df$fat[161:190] <- seq(19, 19, length.out = 30)
