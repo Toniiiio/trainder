@@ -244,13 +244,20 @@ server <- function(input, output, session) {
     print(user_data_files)
     
     source("sportler.R")
+    # global <- list()
+    # global$user_name <- "shiny"
     if(has_file){
       
       global$sportler = readRDS(file = paste0("user_data/", global$user_name, ".RData"))
+      cyclist1()$reload_workouts(global$sportler)
+      print("reloaded workout (details)!")
       
     }else{
       
       global$sportler <- list(name = global$user_name)
+      global$sportler$workouts <- list()
+      global$sportler$workout_details <- list()
+      global$sportler$meta <- list()
       # cyclist1() <- cyclist1$new()
       saveRDS(object = global$sportler, file = paste0("user_data/", global$user_name, ".RData"))
       
@@ -268,6 +275,9 @@ server <- function(input, output, session) {
       cyclist1()$upload_workouts(to_stitch = input$stitch)
       print("upload_Workouts works")
       print(cyclist1()$workout_details)
+      global$sportler$workouts <- cyclist1()$workouts
+      global$sportler$workout_details <- cyclist1()$workout_details
+      global$sportler$meta <- cyclist1()$meta
       file_name <- paste0("user_data/", global$user_name, ".RData")
       saveRDS(object = global$sportler, file = file_name)
       

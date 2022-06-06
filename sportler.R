@@ -171,6 +171,13 @@ cyclist$set("public", "set_file_names", function(file_names){
 })
 
 
+cyclist$set("public", "reload_workouts", function(sportler){
+  self$workout_details <- sportler$workout_details
+  self$workouts <- sportler$workouts
+  self$meta <- sportler$meta
+  private$reactiveDep(isolate(private$reactiveDep()) + 1)
+})
+
 cyclist$set("public", "upload_workouts", function(to_stitch = FALSE){
   
   for(nr in seq(self$file_names)){
@@ -245,7 +252,6 @@ cyclist$set("public", "add_workout", function(file_name, stitch){
   
   self$workout <- workout_raw
   
-
   print("same_day")
   print(same_day)
   has_same_day <- sum(unlist(same_day))
@@ -257,8 +263,6 @@ cyclist$set("public", "add_workout", function(file_name, stitch){
   
   workout_id <- uuid::UUIDgenerate(use.time = TRUE)
   self$workout$meta$id <- workout_id
-  
-
   
   # todo: could refactor that self$watt is not necessary
   no_watts <- is.null(self$workout$records$power)
@@ -341,6 +345,10 @@ cyclist$set("public", "add_workout", function(file_name, stitch){
     }
 
   }
+  
+  print("meta")
+  print(self$meta)
+  print(self$meta$dates)
   
   max_date <- max(self$meta$dates)
   req_end_date <- Sys.Date() + 1
