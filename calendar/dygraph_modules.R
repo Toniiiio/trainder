@@ -302,11 +302,11 @@ modServer <- function(id, workouts, global) {
         has_speed <- !is.null(global$qxts$speed)
         
         out <- tagList()
-        if(has_power) out <- tagList(out, dygraphOutput(ns("dy_watt"), height = "100px"))
-        if(has_altitude) out <- tagList(out, dygraphOutput(ns("dy_altitude"), height = "100px"))
-        if(has_heart_rate) out <- tagList(out, dygraphOutput(ns("dy_heart_rate"), height = "100px"))
-        if(has_cadence) out <- tagList(out, dygraphOutput(ns("dy_cadence"), height = "100px"))
-        if(has_speed) out <- tagList(out, dygraphOutput(ns("dy_speed"), height = "100px"))
+        if(has_power) out <- tagList(out, jqui_resizable(dygraphOutput(ns("dy_watt"), height = "100px")))
+        if(has_altitude) out <- tagList(out, jqui_resizable(dygraphOutput(ns("dy_altitude"), height = "100px")))
+        if(has_heart_rate) out <- tagList(out, jqui_resizable(dygraphOutput(ns("dy_heart_rate"), height = "100px")))
+        if(has_cadence) out <- tagList(out, jqui_resizable(dygraphOutput(ns("dy_cadence"), height = "100px")))
+        if(has_speed) out <- tagList(out, jqui_resizable(dygraphOutput(ns("dy_speed"), height = "100px")))
         
         out
         
@@ -449,24 +449,31 @@ modUI <- function(id, label = "CSV file") {
   ns <- NS(id)
   
   tagList(
-    sidebarLayout(
-      sidebarPanel(
-        div(strong("From: "), textOutput(ns("from"), inline = TRUE)),
-        div(strong("To: "), textOutput(ns("to"), inline = TRUE)),
-        div(strong("Date: "), textOutput(ns("clicked"), inline = TRUE)),
-        uiOutput(ns("averages")),
-        br(),
-        uiOutput(ns("create_seq")),
-        br(),
-        helpText("Click and drag to zoom in (double click to zoom back out).")
+    fluidRow(
+      column(leafletOutput(ns('trackmap')), width = 9),
+      column(
+        width = 3,
+        h4("Duration: 3:06:02"), br(), 
+        h4("Distance: 87.42 km"), br(), 
+        uiOutput(ns("select_workout_for_leaflet"))
       ),
-      mainPanel(
-        uiOutput(ns("select_workout_for_leaflet")),
-        uiOutput(ns("dygraphs")),
-        leafletOutput(ns('trackmap'))
-      )
-    )
+    ),
+    uiOutput(ns("dygraphs")),
   )
+    # sidebarLayout(
+    #   sidebarPanel(
+    #     div(strong("From: "), textOutput(ns("from"), inline = TRUE)),
+    #     div(strong("To: "), textOutput(ns("to"), inline = TRUE)),
+    #     div(strong("Date: "), textOutput(ns("clicked"), inline = TRUE)),
+    #     uiOutput(ns("averages")),
+    #     br(),
+    #     uiOutput(ns("create_seq")),
+    #     br(),
+    #     helpText("Click and drag to zoom in (double click to zoom back out).")
+    #   ),
+    #   mainPanel(
+    #   )
+    # )
 }
 
 

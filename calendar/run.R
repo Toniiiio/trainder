@@ -1,5 +1,6 @@
 library(shiny)
 library(shinyjs)
+library(shinyjqui)
 library(toastui)
 library(waiter)
 library(shinycssloaders)
