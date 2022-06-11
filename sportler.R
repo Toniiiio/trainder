@@ -153,7 +153,10 @@ cyclist$set("public", "calc_tss", function(NP = 184, sec, workout_date){
 })
 
 cyclist$set("public", "watt_quality_check", function(watt){
+  watt[is.na(watt)] <- 0
   missing_power <- watt == 65535
+  print("missing_power")
+  print(missing_power)
   if(sum(missing_power)){
     message("Performing Watt quality check.")
     message("Detecting watt values equal to 65535.")
@@ -175,6 +178,7 @@ cyclist$set("public", "reload_workouts", function(sportler){
   self$workout_details <- sportler$workout_details
   self$workouts <- sportler$workouts
   self$meta <- sportler$meta
+  self$meta$dates <- as.Date(self$meta$dates)
   private$reactiveDep(isolate(private$reactiveDep()) + 1)
 })
 
@@ -214,7 +218,7 @@ cyclist$set("public", "create_watt", function(records){
   return(records)
 })
 
-# file_name <- "biketrainr-master/data/Afternoon_Ride.fit"
+# file_name <- "biketrainr-master/data/6_5min_2min_295_o_.fit"
 # file_name <- "C:/Users/Tonio/Downloads/Evening_Ride.fit"
 # self <- list()
 cyclist$set("public", "add_workout", function(file_name, stitch){
@@ -267,6 +271,7 @@ cyclist$set("public", "add_workout", function(file_name, stitch){
   # todo: could refactor that self$watt is not necessary
   no_watts <- is.null(self$workout$records$power)
   if(no_watts) self$workout$records <- self$create_watt(records = self$workout$records)
+  # watt <- self$workout$records$power
   self$workout$records$power <- self$watt_quality_check(watt = self$workout$records$power)
   
   print("starting used energy")
@@ -293,8 +298,10 @@ cyclist$set("public", "add_workout", function(file_name, stitch){
   avg_power <- mean(self$workout$records$power)
   
   has_workouts <- length(self$workouts)
-  workout_date = self$workout$meta$date
+  workout_date <- as.Date(self$workout$meta$date)
   
+  print("has_workouts")
+  print(has_workouts)
   if(!has_workouts){
     start_date <- workout_date - 1
     end_date <- Sys.Date() + 1
@@ -321,6 +328,9 @@ cyclist$set("public", "add_workout", function(file_name, stitch){
     
     # also take if it is equal to lowest values, since one day before is required for CTL and ATL values.
     require_update <-  workout_date <= min(self$meta$dates)
+    print("require_update")
+    print(require_update)
+    print(is.Date(self$meta$dates))
     
     if(require_update){
       dates <- seq.Date((workout_date - 1), min(self$meta$dates), "days")
@@ -354,7 +364,14 @@ cyclist$set("public", "add_workout", function(file_name, stitch){
   req_end_date <- Sys.Date() + 1
   req_prolong <- max_date < req_end_date
   if(req_prolong){
-    dates <- seq.Date((workout_date - 1), min(self$meta$dates), "days")
+    print("workout_date")
+    print(workout_date - 1)
+    print(is.Date(workout_date))
+    # workout_date <- as.Date("2022-06-09")
+    all_dates <- c(workout_date, self$meta$dates)
+    dates <- seq.Date(min(all_dates), max(all_dates), "days")
+    print("dates")
+    print(dates)
     n_dates <- length(dates)
     meta_to_add <- data.frame(
       id = workout_id,
