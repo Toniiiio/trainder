@@ -72,3 +72,26 @@ Verliert hardcore (wenig units 5 karten - gameover für alle) für rache weil ih
 
 # General McGlory 10393
 Bombt viel zu früh alle anderen weg - auch wenn es sich nicht lohnt oder er es ggf net schafft
+
+# General Hagiware
+sehr agressiv??
+
+# Magnolia The Geek 20
+Recht agressiv 24 Units 5 Karten, früh. macht mich platt
+
+# Gabor Kenyeres
+attackiert schlecht bewachte Kontinente, Grandmaster, wirkt kurzfristig optimierend,
+tiltet wenn von Bot attacked?
+
+# Lucien Cosmo
+rastet aus dem nichts? aus attackiert nur einen hart und geht dann offline - rache?
+
+# Gale Schnitzer 14
+ sehr agressiv. attackiert für 5 karten bei 6-8 einlösen bei 24 units gegner.
+ 
+# General Manvil 60
+viele racheaktionen bis er alles "riskiert" und klar nur 2ter bzw. 3ter wird.
+
+# Tyzon izzard
+killt 10 units ohne vorteil - weil er einen kontinent will ihn sich aber nicht holt?
+wird sehr agressiv und verliert hart - setzt auf alles oder nichts mit wenig chancen.

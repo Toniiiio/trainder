@@ -3,6 +3,7 @@
 # file_name <- "biketrainr-master/data/01_04_2022_Evening_Ride.fit"
 # records <- load_strava(file_name)
 create_dygraph_data <- function(records){
+  print("start module: create_dygraph_data")
   track_raw <- records
   # has_na <- is.na(track_raw) %>% sum
   # if(has_na) stop("NA in data")
@@ -295,7 +296,7 @@ modServer <- function(id, workouts, global) {
       
       output$dygraphs <- renderUI({
         
-        has_heart_rate <- !is.null(global$qxts$heart_rate)
+        global$has_heart_rate <- !is.null(global$qxts$heart_rate)
         has_altitude <- !is.null(global$qxts$altitude)
         has_power <- !is.null(global$qxts$power)
         has_cadence <- !is.null(global$qxts$cadence)
@@ -304,7 +305,7 @@ modServer <- function(id, workouts, global) {
         out <- tagList()
         if(has_power) out <- tagList(out, jqui_resizable(dygraphOutput(ns("dy_watt"), height = "100px")))
         if(has_altitude) out <- tagList(out, jqui_resizable(dygraphOutput(ns("dy_altitude"), height = "100px")))
-        if(has_heart_rate) out <- tagList(out, jqui_resizable(dygraphOutput(ns("dy_heart_rate"), height = "100px")))
+        if(global$has_heart_rate) out <- tagList(out, jqui_resizable(dygraphOutput(ns("dy_heart_rate"), height = "100px")))
         if(has_cadence) out <- tagList(out, jqui_resizable(dygraphOutput(ns("dy_cadence"), height = "100px")))
         if(has_speed) out <- tagList(out, jqui_resizable(dygraphOutput(ns("dy_speed"), height = "100px")))
         
@@ -326,21 +327,29 @@ modServer <- function(id, workouts, global) {
             }")
 
           range <- c(0, max(c(global$qxts$heart_rate, global$qxts$power)))
-          has_heart_rate <- !is.null(global$qxts$heart_rate)
+          global$has_heart_rate <- !is.null(global$qxts$heart_rate)
+          print("global$has_heart_rate")
+          print(global$has_heart_rate)
+          print(global$qxts$heart_rate %>% head)
           
-          if(has_heart_rate){
-            
+          if(global$has_heart_rate){
+            print("inside heart rate")
             # %>% dyRangeSelector()
             
             output$dy_heart_rate <- renderDygraph({
-              graph <- dygraph(global$qxts$heart_rate)
-              graph %<>%
-                dyAxis("y", label = "Heart rate", valueFormatter = valueFormatter) %>% 
-                dyCrosshair(direction = "vertical") %>% 
-                dySeries("heart_rate", axis = 'y',  fillGraph = TRUE, color = "red", strokeWidth = 1) %>% 
-                dyLimit(hr_lit[1], color = "blue") %>%
-                dyLimit(hr_lit[2], color = "blue") %>%
-                dyLimit(hr_lit[3], color = "blue") 
+              print("inside dy_heart_rate")
+              if(global$has_heart_rate){
+                print("inside dy_heart_rate_2")
+                graph <- dygraph(global$qxts$heart_rate)
+                graph %<>%
+                  dyAxis("y", label = "Heart rate", valueFormatter = valueFormatter) %>% 
+                  dyCrosshair(direction = "vertical") %>% 
+                  dySeries("heart_rate", axis = 'y',  fillGraph = TRUE, color = "red", strokeWidth = 1) %>% 
+                  dyLimit(hr_lit[1], color = "blue") %>%
+                  dyLimit(hr_lit[2], color = "blue") %>%
+                  dyLimit(hr_lit[3], color = "blue") 
+                return(graph)
+              }
             })
             
             # do not need it again: 
@@ -403,14 +412,14 @@ modServer <- function(id, workouts, global) {
         track_subset <- global$track_raw[global$heart_range, ]
         
         has_watt <- !is.null(track_subset$power)
-        has_heart_rate <- !is.null(track_subset$heart_rate)
+        global$has_heart_rate <- !is.null(track_subset$heart_rate)
         has_speed <- !is.null(track_subset$speed) # should be included, but for stability of the app
         
         average_watt <- NULL
         average_heart_rate <- NULL
         average_speed <- NULL        
         if(has_watt) average_watt <- div(strong("Average power: "), track_subset$power %>% mean %>% round, "watts", inline = TRUE)
-        if(has_heart_rate) average_heart_rate <- div(strong("Average heart rate: "), track_subset$heart_rate %>% mean %>% round, "bpm", inline = TRUE)
+        if(global$has_heart_rate) average_heart_rate <- div(strong("Average heart rate: "), track_subset$heart_rate %>% mean %>% round, "bpm", inline = TRUE)
         if(has_speed) average_speed <- div(strong("Average speed: "), track_subset$speed %>% mean %>% round(digits = 2), "km/h", inline = TRUE)
         
         tagList(

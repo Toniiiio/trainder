@@ -5,7 +5,7 @@ library(FITfileR)
 library(magrittr)
 library(plyr)
 
-# file_name <- "Lunch_Ride.fit"
+# file_name <- "biketrainr-master/data/2022-06-12-091231-UBERDROID7506-100-0.fit"
 # file_name <- "C:/Users/Tonio/Downloads/Afternoon_Ride (2).fit"
 # file_name <- "C:/Users/Tonio/Downloads/Been_a_while_.fit"
 # file_name <- "C:/Users/User11/Downloads/" %>%
@@ -13,7 +13,7 @@ library(plyr)
 #   file.info() %>%
 #   {rownames(.[which.max(.$atime), ])}
 # file_name
-# file_name <- "biketrainr-master/data/Gravel_Feldberg.fit"
+file_name <- "biketrainr-master/data/Offsite.fit"
 
 # keep <- strava_records %>%
 #   sapply(nrow) %>%
@@ -50,12 +50,28 @@ load_strava <- function(file_name){
   # strava_data <- strava_data[, keep]
   
   strava_data <- zoo::na.locf(strava_data, na.rm = FALSE)  
-  idx <- which(grepl("distance", names(strava_data)))[1]
-  start <- which(!is.na(strava_data[, idx])) %>% min
+  idx <- which(grepl("distance", names(strava_data)))
+  rr <- !is.na(strava_data[, idx]) %>% as.matrix
+  start <- apply(rr, 2, which) %>% unlist %>% min
+
   strava_data <- strava_data[start:nrow(strava_data), ]
   
   names(strava_data) <- gsub(pattern = "[.].*", replacement = "", x = names(strava_data))
+  nms <- names(strava_data)
+  dup1 <- nms %>% duplicated %>% which
+  dup2 <- nms %>% duplicated(fromLast = TRUE) %>% which
+  nr <- dup1[5]
+  keep <- c()
+  for(nr in dup1){
+    name <- nms[nr]
+    idx <- which(name == nms)
+    keep <- c(keep, idx[which.min(colSums(is.na(strava_data[, idx])))])
+  }
   
+  non_dups <- setdiff(seq(nms), c(dup1, dup2))
+  keep1 <- unique(c(non_dups, unique(keep)))
+  strava_data <- strava_data[, keep1]
+    
   # extrem starke Steigung unrealistisch, aber mit Zeitstempel doppelchecken
   # ggf. wurden zeitpunkte ausgelassen 
   #which(diff(records$altitude) < -20.6) 
@@ -64,7 +80,7 @@ load_strava <- function(file_name){
   gpx_idx <- which(strava_data$gps_accuracy == 255)
   if(length(gpx_idx)){
     targets <- c("position_lat", "position_long", "altitude", "speed", "enhanced_altitude", "speed")
-    col_idx <- sapply(targets, function(n) which(n == colnames(strava_data))) %>% unlist
+    col_idx <- sapply(targets, function(n) which(n == colnames(strava_data))) %>% unlist %>% unique
     strava_data[gpx_idx, col_idx] <- NA #   # keep: heart_rate, cadence, timestamp, power
     strava_data[c(min(gpx_idx) - 1, gpx_idx), ] <- zoo::na.locf(strava_data[c(min(gpx_idx) - 1, gpx_idx), ], na.rm = FALSE)
   }
@@ -81,15 +97,18 @@ load_strava <- function(file_name){
   # end <- cumsum(rles$lengths)
   # start <- c(1, 1 + end[-length(end)])
   # cbind(start, end, remove)
-  strava_data <- strava_data[-idx_speed0, ]
+                    # strava_data <- strava_data[-idx_speed0, ]
   # rec <- xxx$records[, c("speed", "timestamp")]
   diffs <- diff(strava_data$timestamp)
   idx <- which(diffs != 1)
-  n <- nrow(strava_data)
-  # nrr <- 1
-  for(nrr in seq(idx)){
-    nr <- idx[nrr]
-    strava_data$timestamp[(nr + 1):n] <- strava_data$timestamp[(nr + 1):n] - as.numeric(diffs[nr]) + 1
+  has_break <- length(idx)
+  if(has_break){
+    n <- nrow(strava_data)
+    # nrr <- 1
+    for(nrr in 1:length(idx)){
+      nr <- idx[nrr]
+      strava_data$timestamp[(nr + 1):n] <- strava_data$timestamp[(nr + 1):n] - as.numeric(diffs[nr]) + 1
+    }
   }
   
   power_idx <- which(strava_data$power == 65535)
@@ -129,7 +148,7 @@ load_strava <- function(file_name){
 # parsed %>% head
 # parsed$meta$altitude
 
-calculate_meta <- function(records){
+calculate_meta <- function(records, require_stitching = FALSE){
  
   time_range <- records$timestamp %>% range
   hr_avg <- mean(records$heart_rate)
@@ -150,7 +169,13 @@ calculate_meta <- function(records){
   
   distance <- max(records$distance)
   stitch_value <- which(diff(records$distance) < 0) # does distance start lower again? --> is stichted
-  if(length(stitch_value)){
+  records$distance %>% head
+  records$distance[stitch_value]
+  plot(records$distance[4300:4600], type ="l")
+  plot(records$distance, type ="l")
+  
+  
+  if(length(stitch_value) & require_stitching){
     print("insiiiide")
     dist_1 <- records$distance[stitch_value]
     dist_2 <- records$distance[length(records$distance)]
@@ -191,6 +216,7 @@ parse_strava <- function(file_name){
   
 }
 
+# xx <- parse_strava(file_name)
 # summary(rec$timestamp)
 # qxts <- xts(rec, order.by = rec$timestamp)
 # qxts$timestamp

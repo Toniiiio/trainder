@@ -104,6 +104,10 @@ cyclist <- R6::R6Class(
       private$reactiveDep(isolate(private$reactiveDep()) + 1)
       print("within update_workouts")
       
+      print("names(self$workouts)")
+      print(names(self$workouts))
+      print("idx")
+      print(idx)
       existing_workout <- self$workouts[[idx]]
       id <- existing_workout$meta$id
       print("id")
@@ -208,7 +212,9 @@ cyclist$set("public", "create_watt", function(records){
     records$watt <- rep(100, nrow(records))
     
   }else{
-    records <- plyr::join(records, nrg, by = "heart_rate")
+    rmv <- nrg$heart_rate %>% duplicated
+    nrg_hr <- nrg[!rmv, ] 
+    records <- plyr::join(records, nrg_hr, by = "heart_rate")
     has_cadence <- !is.null(records$cadence)
     if(has_cadence){
       records[records$cadence == 0, "power"] <- 0
@@ -218,9 +224,10 @@ cyclist$set("public", "create_watt", function(records){
   return(records)
 })
 
-# file_name <- "biketrainr-master/data/6_5min_2min_295_o_.fit"
-# file_name <- "C:/Users/Tonio/Downloads/Evening_Ride.fit"
+# file_name <- "biketrainr-master/data/Offsite.fit"
+# file_name <- "C:/Users/Tonio/Downloads/"
 # self <- list()
+# stitch = FALSE
 cyclist$set("public", "add_workout", function(file_name, stitch){
   
   print("inside add_workout")
@@ -260,7 +267,7 @@ cyclist$set("public", "add_workout", function(file_name, stitch){
   print(same_day)
   has_same_day <- sum(unlist(same_day))
   if(has_same_day & stitch){
-    idx <- same_day[1]
+    idx <- which(same_day)[1]
     records <- self$update_workouts(idx, workout_raw)
     self$workout$records <- records
   }
@@ -404,7 +411,7 @@ cyclist$set("public", "add_workout", function(file_name, stitch){
   
   self$meta[self$meta$dates == workout_date, ]$TSS <- TSS
   self$meta[self$meta$dates == workout_date, ]$altitude <- self$workout$meta$altitude
-  self$meta[self$meta$dates == workout_date, ]$distance <- self$workout$meta$distance / 1000
+  self$meta[self$meta$dates == workout_date, ]$distance <- max(self$workout$meta$distance) / 1000
   
   self$meta[self$meta$dates == workout_date, ]$kcal <- self$energy$kcal
   self$meta[self$meta$dates == workout_date, ]$carbs <- self$energy[[1]]$carbs_from_ma %>% round
